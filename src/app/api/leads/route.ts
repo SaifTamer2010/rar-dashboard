@@ -3,6 +3,17 @@ import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
 
+import { DefaultSession } from "next-auth";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name: string;
+    } & DefaultSession["user"];
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
