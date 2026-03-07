@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -40,6 +41,20 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    function unlock() {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+      if (audioContextRef.current.state === "suspended") {
+        audioContextRef.current.resume();
+      }
+    }
+
+    document.addEventListener("click", unlock, { once: false });
+    return () => document.removeEventListener("click", unlock);
+  }, []);
+
+  useEffect(() => {
     fetchStats();
 
     let eventSource: EventSource;
@@ -50,13 +65,18 @@ export default function DashboardPage() {
       eventSource.onopen = () => console.log("SSE connected!");
 
       eventSource.onmessage = async (e) => {
-        if (e.data === "connected") return; // ignore initial ping
+        if (e.data === "connected") return;
 
         try {
           const payload = JSON.parse(e.data);
           fetchStats();
 
           if (payload.soundUrl) {
+            // Resume context if suspended (mobile background)
+            if (audioContextRef.current?.state === "suspended") {
+              await audioContextRef.current.resume();
+            }
+
             const audio = new Audio(payload.soundUrl);
             audio.play().catch(() => {});
           }
