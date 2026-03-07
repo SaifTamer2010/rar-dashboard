@@ -50,15 +50,18 @@ export default function DashboardPage() {
       eventSource.onopen = () => console.log("SSE connected!");
 
       eventSource.onmessage = async (e) => {
-        if (e.data === "lead_added") {
+        if (e.data === "connected") return; // ignore initial ping
+
+        try {
+          const payload = JSON.parse(e.data);
           fetchStats();
 
-          const res = await fetch("/api/settings/sound");
-          const data = await res.json();
-          if (data.soundUrl) {
-            const audio = new Audio(data.soundUrl);
+          if (payload.soundUrl) {
+            const audio = new Audio(payload.soundUrl);
             audio.play().catch(() => {});
           }
+        } catch {
+          // ignore parse errors
         }
       };
 

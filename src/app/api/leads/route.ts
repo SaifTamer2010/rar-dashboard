@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
 import { broadcastLeadUpdate, clients } from "@/lib/sse";
+import User from "@/models/User";
 
 import { DefaultSession } from "next-auth";
 
@@ -35,9 +36,12 @@ export async function POST(req: NextRequest) {
       campaignId,
     });
 
-    console.log("Broadcasting lead update..."); // add this
-    broadcastLeadUpdate();
-    console.log("Broadcast done, clients:", clients.size); // add this
+    const user = await User.findById(session.user.id);
+
+    broadcastLeadUpdate({
+      userName: user.name,
+      soundUrl: user.soundUrl || null,
+    });
 
     return NextResponse.json({ success: true, lead });
   } catch (error) {

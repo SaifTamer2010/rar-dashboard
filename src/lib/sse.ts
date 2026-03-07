@@ -8,8 +8,11 @@ if (!global.sseClients) {
 
 export const clients = global.sseClients;
 
-export function broadcastLeadUpdate() {
-  const message = `data: lead_added\n\n`;
+export function broadcastLeadUpdate(payload: {
+  userName: string;
+  soundUrl: string | null;
+}) {
+  const message = `data: ${JSON.stringify(payload)}\n\n`;
   const encoded = new TextEncoder().encode(message);
   clients.forEach((client) => {
     try {
