@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
-import { broadcastLeadUpdate, clients } from "@/lib/sse";
+import { pusherServer } from "@/lib/pusher";
 import User from "@/models/User";
 
 import { DefaultSession } from "next-auth";
@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
 
     const user = await User.findById(session.user.id);
 
-    broadcastLeadUpdate({
+    await pusherServer.trigger("leads-channel", "lead-added", {
       userName: user.name,
-      soundUrl: user.soundUrl || null,
+      userId: user._id.toString(), // just send the ID
     });
 
     return NextResponse.json({ success: true, lead });

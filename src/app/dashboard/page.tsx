@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
+import { pusherClient } from "@/lib/pusher";
 
 interface StatRow {
   name: string;
@@ -37,7 +38,6 @@ export default function DashboardPage() {
     setCelebrate(false);
     setTimeout(() => setCelebrate(true), 10); // reset then trigger
     setModalOpen(false);
-    fetchStats();
   }
 
   useEffect(() => {
@@ -57,44 +57,23 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchStats();
 
-    let eventSource: EventSource;
+    const channel = pusherClient.subscribe("leads-channel");
 
-    function connect() {
-      eventSource = new EventSource("/api/events");
+    channel.bind(
+      "lead-added",
+      async (payload: { userName: string; soundUrl: string | null }) => {
+        fetchStats();
 
-      eventSource.onopen = () => console.log("SSE connected!");
-
-      eventSource.onmessage = async (e) => {
-        if (e.data === "connected") return;
-
-        try {
-          const payload = JSON.parse(e.data);
-          fetchStats();
-
-          if (payload.soundUrl) {
-            // Resume context if suspended (mobile background)
-            if (audioContextRef.current?.state === "suspended") {
-              await audioContextRef.current.resume();
-            }
-
-            const audio = new Audio(payload.soundUrl);
-            audio.play().catch(() => {});
-          }
-        } catch {
-          // ignore parse errors
+        if (payload.soundUrl) {
+          const audio = new Audio(payload.soundUrl);
+          audio.play().catch(() => {});
         }
-      };
+      },
+    );
 
-      eventSource.onerror = () => {
-        console.log("SSE error, reconnecting in 3s...");
-        eventSource.close();
-        setTimeout(connect, 3000); // reconnect after 3 seconds
-      };
-    }
-
-    connect();
-
-    return () => eventSource.close();
+    return () => {
+      pusherClient.unsubscribe("leads-channel");
+    };
   }, [fetchStats]);
 
   return (
@@ -147,7 +126,7 @@ export default function DashboardPage() {
         </div>
       </div>
       {/* Fixed bottom button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-gradient-to-t from-gray-950 to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-linear-to-t from-gray-950 to-transparent">
         <button
           onClick={() => setModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-lg font-bold px-12 py-4 rounded-2xl shadow-2xl transition-all"
