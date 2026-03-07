@@ -61,12 +61,23 @@ export default function DashboardPage() {
 
     channel.bind(
       "lead-added",
-      async (payload: { userName: string; soundUrl: string | null }) => {
+      async (payload: { userName: string; userId: string }) => {
+        console.log("Pusher event received:", payload);
         fetchStats();
 
-        if (payload.soundUrl) {
-          const audio = new Audio(payload.soundUrl);
-          audio.play().catch(() => {});
+        const res = await fetch(`/api/sounds/${payload.userId}`);
+        const data = await res.json();
+        console.log("Sound data:", data);
+
+        if (data.soundUrl) {
+          console.log("Playing sound...");
+          const audio = new Audio(data.soundUrl);
+          const playResult = await audio
+            .play()
+            .catch((e) => console.log("Play error:", e));
+          // console.log("Play result:", playResult);
+        } else {
+          console.log("No sound URL found");
         }
       },
     );
