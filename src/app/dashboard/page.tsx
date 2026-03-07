@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
+import Celebration from "@/components/Celebration";
 
 interface StatRow {
   name: string;
@@ -15,6 +16,7 @@ export default function DashboardPage() {
   const [byTotal, setByTotal] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [celebrate, setCelebrate] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -30,28 +32,16 @@ export default function DashboardPage() {
     }
   }, []);
 
+  function handleLeadSuccess() {
+    setCelebrate(false);
+    setTimeout(() => setCelebrate(true), 10); // reset then trigger
+    setModalOpen(false);
+    fetchStats();
+  }
+
   useEffect(() => {
     fetchStats();
-
-    console.log("Opening SSE connection...");
     const eventSource = new EventSource("/api/events");
-
-    eventSource.onopen = () => {
-      console.log("SSE connected!");
-    };
-
-    eventSource.onmessage = (e) => {
-      console.log("SSE message received:", e.data);
-      if (e.data === "lead_added") {
-        fetchStats();
-      }
-    };
-
-    eventSource.onerror = (e) => {
-      console.log("SSE error:", e);
-      eventSource.close();
-    };
-
     eventSource.onmessage = async (e) => {
       if (e.data === "lead_added") {
         fetchStats();
@@ -67,26 +57,25 @@ export default function DashboardPage() {
     };
 
     return () => {
-      console.log("Closing SSE connection");
       eventSource.close();
     };
   }, [fetchStats]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8 pb-32">
-      <header className="w-full flex justify-between">
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+      <header className="w-full flex justify-between mb-2">
+        <h1 className="text-xl md:text-3xl font-bold">Dashboard</h1>
 
         <Link
           href="/settings"
-          className="text-xl font-bold mb-2 bg-slate-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
+          className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
         >
           Settings
         </Link>
       </header>
 
       <div className="flex justify-center h-full w-full items-center">
-        <div className="w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
+        <div className="w-[90%] md:w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
           <header className="border-b-2 border-dashed font-bold text-center text-2xl p-2">
             <h1>Power Ringers Daily Dashboard</h1>
           </header>
@@ -134,37 +123,9 @@ export default function DashboardPage() {
       <CampaignModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSuccess={() => {
-          setModalOpen(false);
-          fetchStats();
-        }}
+        onSuccess={handleLeadSuccess}
       />
+      <Celebration trigger={celebrate} />
     </div>
   );
 }
-
-// {byCampaign.length === 0 ? (
-//               <p className="text-gray-500 text-sm">No leads yet</p>
-//             ) : (
-//               <table className="w-full text-sm">
-//                 <thead>
-//                   <tr className="text-gray-400 border-b border-gray-800">
-//                     <th className="text-left py-2">Campaign</th>
-//                     <th className="text-right py-2">Leads</th>
-//                   </tr>
-//                 </thead>
-//                 <tbody>
-//                   {byCampaign.map((row) => (
-//                     <tr
-//                       key={row.name}
-//                       className="border-b border-gray-800 hover:bg-gray-800 transition"
-//                     >
-//                       <td className="py-3">{row.name}</td>
-//                       <td className="py-3 text-right font-bold text-green-400">
-//                         {row.count}
-//                       </td>
-//                     </tr>
-//                   ))}
-//                 </tbody>
-//               </table>
-//             )}

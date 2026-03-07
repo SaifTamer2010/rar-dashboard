@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+// import { useCelebration } from "@/hooks/useCelebration";
 
 interface Campaign {
   _id: string;
@@ -18,6 +19,8 @@ export default function CampaignModal({ open, onClose, onSuccess }: Props) {
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+
+  // const { celebrate } = useCelebration();
 
   useEffect(() => {
     if (!open) return;

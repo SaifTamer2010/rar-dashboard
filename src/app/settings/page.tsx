@@ -134,12 +134,12 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8 mx-auto w-full">
-      <header className="w-full flex justify-between">
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+      <header className="w-full flex justify-between  mb-2">
+        <h1 className="text-xl md:text-3xl font-bold mt-2">Settings</h1>
 
         <Link
           href="/dashboard"
-          className="text-xl font-bold mb-2 bg-slate-800 w-36 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
+          className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-36 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
         >
           Dashboard
         </Link>
@@ -147,7 +147,7 @@ export default function SettingsPage() {
 
       {/* Profile Section */}
 
-      <div className="w-[70%] mx-auto">
+      <div className="w-[90%] md:w-[70%] mx-auto">
         <section className="bg-gray-900 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-6">Profile</h2>
 
