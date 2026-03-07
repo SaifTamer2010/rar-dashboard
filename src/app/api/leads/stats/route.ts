@@ -57,8 +57,9 @@ export async function GET() {
       },
       { $sort: { count: -1 } },
     ]);
+    const totalLeads = await Lead.countDocuments();
 
-    return NextResponse.json({ byUser, byCampaign });
+    return NextResponse.json({ byUser, byCampaign, totalLeads });
   } catch (error) {
     console.error("stats error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
