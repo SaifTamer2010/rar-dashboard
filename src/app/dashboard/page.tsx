@@ -41,24 +41,37 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStats();
-    const eventSource = new EventSource("/api/events");
-    eventSource.onmessage = async (e) => {
-      if (e.data === "lead_added") {
-        fetchStats();
 
-        // Play the notification sound
-        const res = await fetch("/api/settings/sound");
-        const data = await res.json();
-        if (data.soundUrl) {
-          const audio = new Audio(data.soundUrl);
-          audio.play().catch(() => {}); // catch autoplay block
+    let eventSource: EventSource;
+
+    function connect() {
+      eventSource = new EventSource("/api/events");
+
+      eventSource.onopen = () => console.log("SSE connected!");
+
+      eventSource.onmessage = async (e) => {
+        if (e.data === "lead_added") {
+          fetchStats();
+
+          const res = await fetch("/api/settings/sound");
+          const data = await res.json();
+          if (data.soundUrl) {
+            const audio = new Audio(data.soundUrl);
+            audio.play().catch(() => {});
+          }
         }
-      }
-    };
+      };
 
-    return () => {
-      eventSource.close();
-    };
+      eventSource.onerror = () => {
+        console.log("SSE error, reconnecting in 3s...");
+        eventSource.close();
+        setTimeout(connect, 3000); // reconnect after 3 seconds
+      };
+    }
+
+    connect();
+
+    return () => eventSource.close();
   }, [fetchStats]);
 
   return (
