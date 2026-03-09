@@ -18,6 +18,7 @@ export default function SettingsPage() {
 
   // Profile
   const [name, setName] = useState("");
+  const [telegramUsername, setTelegramUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
@@ -35,9 +36,14 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
+    if (session?.user) {
+      setName(session.user.name);
+      // fetch current telegram username
+      fetch("/api/user/me")
+        .then((r) => r.json())
+        .then((data) => setTelegramUsername(data.telegramUsername || ""));
+    }
   }, [session]);
-
   useEffect(() => {
     fetch("/api/leads/history")
       .then((r) => r.json())
@@ -54,7 +60,7 @@ export default function SettingsPage() {
     setProfileLoading(true);
     setProfileMsg("");
 
-    const body: Record<string, string> = { name };
+    const body: Record<string, string> = { name, telegramUsername };
     if (currentPassword && newPassword) {
       body.currentPassword = currentPassword;
       body.newPassword = newPassword;
@@ -177,6 +183,27 @@ export default function SettingsPage() {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-400 mb-1 block">
+                Telegram Username{" "}
+                <span className="text-gray-600">(optional)</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={telegramUsername}
+                  onChange={(e) =>
+                    setTelegramUsername(e.target.value.replace("@", ""))
+                  }
+                  placeholder="username"
+                  className="w-full bg-gray-800 text-white pl-8 pr-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             <div>

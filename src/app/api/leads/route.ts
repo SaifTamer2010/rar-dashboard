@@ -46,8 +46,13 @@ export async function POST(req: NextRequest) {
 
     // after Lead.create(...)
     const campaignObject = await Campaign.findById(campaignId);
+
+    const mention = user.telegramUsername
+      ? `@${user.telegramUsername}`
+      : user.name;
+
     await sendTelegramMessage(
-      `*${user.name}* OUT HEEERRRREEEE COOOKKKEEEDDDDD OOOOOONNNN *${campaignObject.name}* 🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥`,
+      `*${mention}* OUT HEEERRRREEEE COOOKKKEEEDDDDD OOOOOONNNN *${campaignObject.name}* 🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥`,
     );
 
     return NextResponse.json({ success: true, lead });

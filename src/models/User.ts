@@ -5,6 +5,7 @@ export interface IUser extends Document {
   password: string | null;
   soundUrl: string;
   role: string;
+  telegramUsername: string | null; // add this
   createdAt: Date;
 }
 
@@ -13,6 +14,7 @@ const UserSchema = new Schema<IUser>({
   password: { type: String, default: null },
   soundUrl: { type: String, default: null },
   role: { type: String, enum: ["admin", "user", "viewer"], default: "user" },
+  telegramUsername: { type: String, default: null }, // add this
   createdAt: { type: Date, default: Date.now },
 });
 export default mongoose.models.User ||

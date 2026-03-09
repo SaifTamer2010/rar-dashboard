@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
     if (!session)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { name, currentPassword, newPassword } = await req.json();
+    const { name, currentPassword, newPassword, telegramUsername } =
+      await req.json();
 
     await connectToDatabase();
 
@@ -22,6 +23,12 @@ export async function POST(req: NextRequest) {
     if (name && name !== user.name) {
       user.name = name;
     }
+
+    if (telegramUsername !== undefined) {
+      user.telegramUsername = telegramUsername || null;
+    }
+
+    console.log(user.telegramUsername);
 
     // Update password
     if (currentPassword && newPassword) {
