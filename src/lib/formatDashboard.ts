@@ -27,6 +27,7 @@ export function formatDashboardMessage(
   byUser: StatRow[],
   byCampaign: StatRow[],
   totalLeads: number,
+  sentBy: String,
 ): string {
   const userLines = byUser
     .map((r) => `${toEmojiNumber(r.count)} ${r.name}`)
@@ -39,13 +40,14 @@ export function formatDashboardMessage(
   const totalLine = toEmojiNumber(totalLeads);
 
   return `
-======================
+==============================
     POWER RINGERS 
-======================  
+==============================
 ${userLines}
-======================
+==============================
 Total Leads ${totalLine}
-======================
+==============================
 ${campaignLines}
-=====================`;
+==============================
+sent by : ${sentBy}`;
 }

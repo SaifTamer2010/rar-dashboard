@@ -71,7 +71,12 @@ export async function POST() {
 
     const totalLeads = await Lead.countDocuments(dateMatch);
 
-    const message = formatDashboardMessage(byUser, byCampaign, totalLeads);
+    const message = formatDashboardMessage(
+      byUser,
+      byCampaign,
+      totalLeads,
+      session.user.name,
+    );
     await sendTelegramMessage(message);
 
     return NextResponse.json({ success: true });
