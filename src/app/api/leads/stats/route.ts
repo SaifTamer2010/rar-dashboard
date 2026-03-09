@@ -1,62 +1,53 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
+import User from "@/models/User";
+import Campaign from "@/models/Campaign";
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    const byUser = await Lead.aggregate([
-      {
-        $group: {
-          _id: "$userId",
-          count: { $sum: 1 },
-        },
-      },
+    // Start from users, left join leads
+    const byUser = await User.aggregate([
       {
         $lookup: {
-          from: "users",
+          from: "leads",
           localField: "_id",
-          foreignField: "_id",
-          as: "user",
+          foreignField: "userId",
+          as: "leads",
         },
       },
-      { $unwind: "$user" },
       {
         $project: {
           _id: 0,
-          name: "$user.name",
-          count: 1,
+          name: 1,
+          count: { $size: "$leads" },
         },
       },
       { $sort: { count: -1 } },
     ]);
 
-    const byCampaign = await Lead.aggregate([
-      {
-        $group: {
-          _id: "$campaignId",
-          count: { $sum: 1 },
-        },
-      },
+    // Start from campaigns, left join leads
+    const byCampaign = await Campaign.aggregate([
       {
         $lookup: {
-          from: "campaigns",
+          from: "leads",
           localField: "_id",
-          foreignField: "_id",
-          as: "campaign",
+          foreignField: "campaignId",
+          as: "leads",
         },
       },
-      { $unwind: "$campaign" },
       {
         $project: {
           _id: 0,
-          name: "$campaign.name",
-          count: 1,
+          name: 1,
+          count: { $size: "$leads" },
         },
       },
       { $sort: { count: -1 } },
     ]);
+
     const totalLeads = await Lead.countDocuments();
 
     return NextResponse.json({ byUser, byCampaign, totalLeads });

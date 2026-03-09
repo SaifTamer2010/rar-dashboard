@@ -27,6 +27,8 @@ export default function DashboardPage() {
       setByUser(data.byUser || []);
       setByCampaign(data.byCampaign || []);
       setByTotal(data.totalLeads || 0);
+      console.log(data.byUser);
+      console.log(data.bycampaign);
     } catch (error) {
       console.error("fetch stats error:", error);
     } finally {
