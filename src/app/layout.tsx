@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Daily Dashboard",
     description: "Real-time sales leads tracker for high-performance teams.",
-    url: "",
-    siteName: "LeadPulse",
+    url: "https://rar-dashboard-six.vercel.app/sign-in",
+    siteName: "Daily Dashboard",
     images: [
       {
-        url: "https://rar-dashboard-six.vercel.app/og-image.png",
+        url: "https://rar-dashboard-six.vercel.app/opengraph-image",
         width: 1200,
         height: 630,
         alt: "Daily Dashboard",
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "LeadPulse",
+    title: "Daily Dashboard",
     description: "Real-time sales leads tracker for high-performance teams.",
-    images: ["https://rar-dashboard-six.vercel.app/og-image.png"],
+    images: ["https://rar-dashboard-six.vercel.app/opengraph-image"],
   },
 };
 
