@@ -7,6 +7,7 @@ import Celebration from "@/components/Celebration";
 import { pusherClient } from "@/lib/pusher";
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
+import { formatDashboardMessage } from "@/lib/formatDashboard";
 
 interface StatRow {
   name: string;
@@ -21,6 +22,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const { data: session } = useSession();
   const isViewer = session?.user?.role === "viewer";
@@ -94,6 +97,24 @@ export default function DashboardPage() {
     };
   }, [fetchStats]);
 
+  function handleCopy() {
+    const message = formatDashboardMessage(byUser, byCampaign, byTotal);
+    navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleSendTelegram() {
+    setSending(true);
+    const res = await fetch("/api/telegram/send-dashboard", { method: "POST" });
+    setSending(false);
+    if (res.ok) {
+      alert("Sent to Telegram!");
+    } else {
+      alert("Failed to send");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8 pb-32">
       <header className="w-full flex justify-between mb-2">
@@ -118,6 +139,21 @@ export default function DashboardPage() {
         <div className="w-[90%] md:w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
           <header className="border-b-2 border-dashed font-bold text-center text-2xl p-2">
             <h1>Power Ringers Daily Dashboard</h1>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={handleCopy}
+                className={`bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm transition ${copied ? "bg-green-700" : "bg-gray-800 hover-bg-gray-700"}`}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <button
+                onClick={handleSendTelegram}
+                disabled={sending}
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-4 py-2 rounded-xl text-sm transition"
+              >
+                {sending ? "Sending..." : "📨 Send to Telegram"}
+              </button>
+            </div>
           </header>
           <section className="p-2">
             <header className=" border-b-2 border-slate-600 w-full grid grid-cols-[2fr_1fr] p-4">
@@ -157,7 +193,7 @@ export default function DashboardPage() {
             onClick={() => setModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-lg font-bold px-12 py-4 rounded-2xl shadow-2xl transition-all"
           >
-            1 DOWNNNNNNN
+            OSTOOR YDAWLYYYYYYYYY
           </button>
         </div>
       )}

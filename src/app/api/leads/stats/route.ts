@@ -1,23 +1,47 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Start from users, left join leads
+    const { searchParams } = new URL(req.url);
+    // searchParams.get("filter") || "today" if you want to toggle between alltime and today's leads
+
+    const filter = "today";
+
+    // Build date filter — day runs from 5 AM UTC (7 AM Egypt) to next 5 AM UTC
+    let dateMatch: Record<string, any> = {};
+    if (filter === "today") {
+      const now = new Date();
+      const start = new Date();
+      start.setUTCHours(5, 0, 0, 0);
+
+      // If before 5 AM UTC, go back to previous day's 5 AM
+      if (now.getUTCHours() < 5) {
+        start.setUTCDate(start.getUTCDate() - 1);
+      }
+
+      dateMatch = { createdAt: { $gte: start } };
+    }
+
     const byUser = await User.aggregate([
-      {
-        $match: { role: "user" },
-      },
+      { $match: { role: "user" } },
       {
         $lookup: {
           from: "leads",
-          localField: "_id",
-          foreignField: "userId",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$userId", "$$userId"] },
+                ...dateMatch,
+              },
+            },
+          ],
           as: "leads",
         },
       },
@@ -31,13 +55,19 @@ export async function GET() {
       { $sort: { count: -1 } },
     ]);
 
-    // Start from campaigns, left join leads
     const byCampaign = await Campaign.aggregate([
       {
         $lookup: {
           from: "leads",
-          localField: "_id",
-          foreignField: "campaignId",
+          let: { campaignId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$campaignId", "$$campaignId"] },
+                ...dateMatch,
+              },
+            },
+          ],
           as: "leads",
         },
       },
@@ -51,7 +81,9 @@ export async function GET() {
       { $sort: { count: -1 } },
     ]);
 
-    const totalLeads = await Lead.countDocuments();
+    const totalLeads = await Lead.countDocuments(
+      filter === "today" ? dateMatch : {},
+    );
 
     return NextResponse.json({ byUser, byCampaign, totalLeads });
   } catch (error) {
