@@ -98,7 +98,12 @@ export default function DashboardPage() {
   }, [fetchStats]);
 
   function handleCopy() {
-    const message = formatDashboardMessage(byUser, byCampaign, byTotal);
+    const message = formatDashboardMessage(
+      byUser,
+      byCampaign,
+      byTotal,
+      "eldawlyyyy",
+    );
     navigator.clipboard.writeText(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
