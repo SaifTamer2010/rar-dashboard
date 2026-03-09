@@ -11,6 +11,9 @@ export async function GET() {
     // Start from users, left join leads
     const byUser = await User.aggregate([
       {
+        $match: { role: "user" },
+      },
+      {
         $lookup: {
           from: "leads",
           localField: "_id",

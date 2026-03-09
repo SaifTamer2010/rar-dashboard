@@ -5,6 +5,8 @@ import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
 import { pusherClient } from "@/lib/pusher";
+import { signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 interface StatRow {
   name: string;
@@ -19,6 +21,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  const { data: session } = useSession();
+  const isViewer = session?.user?.role === "viewer";
 
   const fetchStats = useCallback(async () => {
     try {
@@ -93,13 +98,20 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-950 text-white p-8 pb-32">
       <header className="w-full flex justify-between mb-2">
         <h1 className="text-xl md:text-3xl font-bold">Dashboard</h1>
-
-        <Link
-          href="/settings"
-          className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
-        >
-          Settings
-        </Link>
+        <div className=" flex justify-between gap-4">
+          <Link
+            href="/settings"
+            className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
+          >
+            Settings
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            className="text-md md:text-lg font-semibold mb-2 bg-red-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-red-700 transition-all cursor-pointer flex justify-center items-center"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className="flex justify-center h-full w-full items-center">
@@ -139,14 +151,16 @@ export default function DashboardPage() {
         </div>
       </div>
       {/* Fixed bottom button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-linear-to-t from-gray-950 to-transparent">
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-lg font-bold px-12 py-4 rounded-2xl shadow-2xl transition-all"
-        >
-          1 DOWNNNNNNN
-        </button>
-      </div>
+      {!isViewer && (
+        <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-gradient-to-t from-gray-950 to-transparent">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-lg font-bold px-12 py-4 rounded-2xl shadow-2xl transition-all"
+          >
+            1 DOWNNNNNNN
+          </button>
+        </div>
+      )}
 
       <CampaignModal
         open={modalOpen}

@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
+import Image from "next/image";
+import Trash from "../../../public/trash.svg";
 
 interface Lead {
   _id: string;
@@ -132,17 +135,31 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleDelete(leadId: string) {
+    const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
+    if (res.ok) {
+      setLeads((prev) => prev.filter((l) => l._id !== leadId));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8 mx-auto w-full">
       <header className="w-full flex justify-between  mb-2">
         <h1 className="text-xl md:text-3xl font-bold mt-2">Settings</h1>
-
-        <Link
-          href="/dashboard"
-          className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-36 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
-        >
-          Dashboard
-        </Link>
+        <div className=" flex justify-between gap-4">
+          <Link
+            href="/dashboard"
+            className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-36 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
+          >
+            Dashboard
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            className="text-md md:text-lg font-semibold mb-2 bg-red-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-red-700 transition-all cursor-pointer flex justify-center items-center"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Profile Section */}
@@ -286,8 +303,19 @@ export default function SettingsPage() {
                     key={lead._id}
                     className="border-b border-gray-800 hover:bg-gray-800 transition"
                   >
-                    <td className="py-3">
+                    <td className="py-3 flex gap-2">
                       {lead.campaignId?.name || "Unknown"}
+                      <button
+                        onClick={() => handleDelete(lead._id)}
+                        className="text-red-400 hover:text-red-300 text-sm transition cursor-pointer"
+                      >
+                        <Image
+                          src={Trash}
+                          width={15}
+                          height={15}
+                          alt={"delete"}
+                        />
+                      </button>
                     </td>
                     <td className="py-3 text-right text-gray-400">
                       {new Date(lead.createdAt).toLocaleString()}
