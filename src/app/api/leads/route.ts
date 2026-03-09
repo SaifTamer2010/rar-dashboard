@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import Lead from "@/models/Lead";
 import { pusherServer } from "@/lib/pusher";
+import { sendTelegramMessage } from "@/lib/telegram";
+import Lead from "@/models/Lead";
 import User from "@/models/User";
-
+import Campaign from "@/models/Campaign";
 import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
@@ -42,6 +43,12 @@ export async function POST(req: NextRequest) {
       userName: user.name,
       userId: user._id.toString(), // just send the ID
     });
+
+    // after Lead.create(...)
+    const campaignObject = await Campaign.findById(campaignId);
+    await sendTelegramMessage(
+      `*${user.name}* WITH ONE LEAD DOWN ONNN *${campaignObject.name}* 🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥🥵🔥`,
+    );
 
     return NextResponse.json({ success: true, lead });
   } catch (error) {
