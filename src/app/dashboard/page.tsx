@@ -24,6 +24,17 @@ export default function DashboardPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  function enableSound() {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    audioContextRef.current.resume();
+    setSoundEnabled(true);
+  }
+
+  // Show it at the top of the dashboard
 
   const { data: session } = useSession();
   const isViewer = session?.user?.role === "viewer";
@@ -141,6 +152,14 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex justify-center h-full w-full items-center">
+        {!soundEnabled && (
+          <button
+            onClick={enableSound}
+            className="fixed right-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2 rounded-xl text-sm z-50 animate-pulse bottom-5 cursor-pointer"
+          >
+            🔔 Enable Sound
+          </button>
+        )}
         <div className="w-[90%] md:w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
           <header className="border-b-2 border-dashed font-bold text-center text-2xl p-2">
             <h1>Power Ringers Daily Dashboard</h1>
