@@ -258,7 +258,7 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
-          <footer className="border-t-2 border-dashed font-bold text-center text-2xl mt-4 p-2">
+          <footer className="border-t-2 border-dashed font-bold text-center text-2xl mt-4 p-2 flex justify-center">
             {lastLead && (
               <p className="text-gray-400 text-sm">
                 Last lead:{" "}
@@ -274,6 +274,9 @@ export default function DashboardPage() {
                   {new Date(lastLead.createdAt).toLocaleTimeString()}
                 </span>
               </p>
+            )}
+            {loading && (
+              <div className="w-[80%] px-auto bg-white/10 backdrop-blur-lg shadow-lg rounded-sm h-6 animate-pulse"></div>
             )}
           </footer>
         </div>
