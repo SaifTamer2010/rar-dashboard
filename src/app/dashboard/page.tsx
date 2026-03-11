@@ -18,6 +18,11 @@ export default function DashboardPage() {
   const [byUser, setByUser] = useState<StatRow[]>([]);
   const [byCampaign, setByCampaign] = useState<StatRow[]>([]);
   const [byTotal, setByTotal] = useState(0);
+  const [lastLead, setLastLead] = useState<{
+    userId: { name: string };
+    campaignId: { name: string };
+    createdAt: string;
+  } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
@@ -47,8 +52,7 @@ export default function DashboardPage() {
       setByUser(data.byUser || []);
       setByCampaign(data.byCampaign || []);
       setByTotal(data.totalLeads || 0);
-      console.log(data.byUser);
-      console.log(data.bycampaign);
+      setLastLead(data.lastLead || null);
     } catch (error) {
       console.error("fetch stats error:", error);
     } finally {
@@ -86,6 +90,8 @@ export default function DashboardPage() {
       async (payload: { userName: string; userId: string }) => {
         console.log("Pusher event received:", payload);
         fetchStats();
+        console.log(byUser);
+        console.log(byCampaign);
 
         const res = await fetch(`/api/sounds/${payload.userId}`);
         const data = await res.json();
@@ -111,7 +117,7 @@ export default function DashboardPage() {
 
       // Play shame sound
       const utterance = new SpeechSynthesisUtterance(
-        `That's a shame, No leads for ${payload.minutesSinceLastLead} minutes. Get back to work nigga`,
+        `That's a shame, No leads for ${payload.minutesSinceLastLead} minutes. Last Lead was by ${lastLead?.userId.name} Get back to work nigga`,
       );
 
       // Try to find the most "hype" voice available
@@ -191,10 +197,11 @@ export default function DashboardPage() {
             🔔 Enable Sound
           </button>
         )}
+
         <div className="w-[90%] md:w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
           <header className="border-b-2 border-dashed font-bold text-center text-2xl p-2">
             <h1>Power Ringers Daily Dashboard</h1>
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center my-2">
               <button
                 onClick={handleCopy}
                 className={`bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm transition ${copied ? "bg-green-700" : "bg-gray-800 hover-bg-gray-700"}`}
@@ -211,19 +218,25 @@ export default function DashboardPage() {
             </div>
           </header>
           <section className="p-2">
-            <header className=" border-b-2 border-slate-600 w-full grid grid-cols-[2fr_1fr] p-4">
+            <header className=" border-b-2 border-slate-600 w-full grid grid-cols-[2fr_1fr] p-4 mb-4">
               <h1>Leads</h1>
               <h1>Name</h1>
             </header>
             {byUser.map((row) => (
               <div
                 key={row.name}
-                className="w-full grid grid-cols-[2fr_1fr] px-4 py-2 font-semibold text-md"
+                className="w-full grid grid-cols-[2fr_1fr] px-4 font-semibold text-md"
               >
                 <h1>{row.count}</h1>
                 <h1>{row.name}</h1>
               </div>
             ))}
+            {loading && (
+              <div className="w-full grid grid-cols-[2fr_1fr] px-4 font-semibold text-md pulse">
+                <div className="w-[20%] md:w-[15%] bg-white/10 backdrop-blur-lg shadow-lg rounded-sm h-6 animate-pulse"></div>
+                <div className=" bg-white/10 backdrop-blur-lg shadow-lg rounded-md h-6 animate-pulse"></div>
+              </div>
+            )}
             <div className="border-b-4 border-double w-full border-slate-700 my-4"></div>
             <h1 className="font-bold pl-2">
               Total Leads: <span className="font-normal">{byTotal}</span>
@@ -232,18 +245,42 @@ export default function DashboardPage() {
             {byCampaign.map((row) => (
               <div
                 key={row.name}
-                className="w-full grid grid-cols-[2fr_1fr] px-4 py-2 font-semibold text-md"
+                className="w-full grid grid-cols-[2fr_1fr] px-4 font-semibold text-md"
               >
                 <h1>{row.count}</h1>
                 <h1>{row.name}</h1>
               </div>
             ))}
+            {loading && (
+              <div className="w-full grid grid-cols-[2fr_1fr] px-4 font-semibold text-md pulse">
+                <div className="w-[20%] md:w-[15%] bg-white/10 backdrop-blur-lg shadow-lg rounded-sm h-6 animate-pulse"></div>
+                <div className=" bg-white/10 backdrop-blur-lg shadow-lg rounded-md h-6 animate-pulse"></div>
+              </div>
+            )}
           </section>
+          <footer className="border-t-2 border-dashed font-bold text-center text-2xl mt-4 p-2">
+            {lastLead && (
+              <p className="text-gray-400 text-sm">
+                Last lead:{" "}
+                <span className="text-white font-medium">
+                  {lastLead.userId?.name}
+                </span>{" "}
+                on{" "}
+                <span className="text-white font-medium">
+                  {lastLead.campaignId?.name}
+                </span>{" "}
+                at{" "}
+                <span className="text-white font-medium">
+                  {new Date(lastLead.createdAt).toLocaleTimeString()}
+                </span>
+              </p>
+            )}
+          </footer>
         </div>
       </div>
       {/* Fixed bottom button */}
       {!isViewer && (
-        <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-gradient-to-t from-gray-950 to-transparent">
+        <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center bg-linear-to-t from-gray-950 to-transparent">
           <button
             onClick={() => setModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-lg font-bold px-12 py-4 rounded-2xl shadow-2xl transition-all"

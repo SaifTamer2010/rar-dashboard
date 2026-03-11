@@ -85,7 +85,12 @@ export async function GET(req: NextRequest) {
       filter === "today" ? dateMatch : {},
     );
 
-    return NextResponse.json({ byUser, byCampaign, totalLeads });
+    const lastLead = await Lead.findOne()
+      .sort({ createdAt: -1 })
+      .populate("userId", "name")
+      .populate("campaignId", "name");
+
+    return NextResponse.json({ byUser, byCampaign, totalLeads, lastLead });
   } catch (error) {
     console.error("stats error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
