@@ -16,7 +16,7 @@ export async function GET() {
     const diffMinutes =
       (now.getTime() - lastLead.createdAt.getTime()) / 1000 / 60;
 
-    if (diffMinutes >= 0.5) {
+    if (diffMinutes >= 30) {
       await pusherServer.trigger("leads-channel", "shame-bell", {
         minutesSinceLastLead: Math.floor(diffMinutes),
       });

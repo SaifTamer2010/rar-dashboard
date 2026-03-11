@@ -127,7 +127,7 @@ export default function DashboardPage() {
       utterance.volume = 1;
 
       utterance.onend = () => {
-        const audio = new Audio("/whip-soundeffect.m4a");
+        const audio = new Audio("/whip-soundeffect.mp4");
         audio.play().catch(() => {});
       };
 
@@ -253,11 +253,22 @@ export default function DashboardPage() {
         </div>
       )}
       {shameActive && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-gray-900 border border-red-500 rounded-2xl p-8 text-center animate-bounce shadow-2xl shadow-red-500/20">
-            <p className="text-6xl mb-4">💀</p>
-            <p className="text-2xl font-bold text-red-400">Someone wake up!</p>
-            <p className="text-gray-400 text-sm mt-2">No leads in 30 minutes</p>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none ">
+          <div className="bg-gray-900 border border-red-500 rounded-2xl p-8 text-center shadow-2xl shadow-red-500/20 w-100">
+            <video
+              src="/get-to-work-work.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-74 h-74 object-cover rounded-xl mx-auto mb-4"
+            />
+            <p className="text-2xl font-bold text-red-400">
+              NIGGASSS BACK TO WORKKKKK
+            </p>
+            <p className="text-gray-400 text-sm mt-2">
+              MONEY ISNT GONNA PRINT ITSELFF
+            </p>
           </div>
         </div>
       )}
