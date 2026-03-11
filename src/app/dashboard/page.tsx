@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [shameActive, setShameActive] = useState(false);
 
   function enableSound() {
     if (!audioContextRef.current) {
@@ -102,6 +103,36 @@ export default function DashboardPage() {
         }
       },
     );
+
+    channel.bind("shame-bell", (payload: { minutesSinceLastLead: number }) => {
+      // Show shame UI
+      setShameActive(true);
+      setTimeout(() => setShameActive(false), 10000); // show for 10 seconds
+
+      // Play shame sound
+      const utterance = new SpeechSynthesisUtterance(
+        `That's a shame, No leads for ${payload.minutesSinceLastLead} minutes. Get back to work nigga`,
+      );
+
+      // Try to find the most "hype" voice available
+      const voices = window.speechSynthesis.getVoices();
+      const preferred =
+        voices.find((v) => v.name.includes("Google US English")) ||
+        voices.find((v) => v.lang === "en-US") ||
+        voices[0];
+
+      if (preferred) utterance.voice = preferred;
+      utterance.rate = 1.1; // slightly faster = more hype
+      utterance.pitch = 0.7; // lower pitch = deeper voice
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        const audio = new Audio("/whip-soundeffect.m4a");
+        audio.play().catch(() => {});
+      };
+
+      window.speechSynthesis.speak(utterance);
+    });
 
     return () => {
       pusherClient.unsubscribe("leads-channel");
@@ -221,7 +252,15 @@ export default function DashboardPage() {
           </button>
         </div>
       )}
-
+      {shameActive && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-gray-900 border border-red-500 rounded-2xl p-8 text-center animate-bounce shadow-2xl shadow-red-500/20">
+            <p className="text-6xl mb-4">💀</p>
+            <p className="text-2xl font-bold text-red-400">Someone wake up!</p>
+            <p className="text-gray-400 text-sm mt-2">No leads in 30 minutes</p>
+          </div>
+        </div>
+      )}
       <CampaignModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
