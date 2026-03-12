@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { pusherClient } from "@/lib/pusher";
+import { useAdminGuard } from "@/hooks/useAdminGuard";
 
 interface Message {
   _id: string;
@@ -31,6 +32,7 @@ export default function BotPage() {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { status } = useAdminGuard();
 
   useEffect(() => {
     fetch("/api/telegram/messages?limit=50&skip=0")
@@ -106,7 +108,12 @@ export default function BotPage() {
   );
 
   const selectedConvo = selectedChatId ? conversations[selectedChatId] : null;
-
+  if (status === "loading")
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-gray-400">Loading...</p>
+      </div>
+    );
   return (
     <div className="h-screen bg-gray-950 text-white flex overflow-hidden">
       {/* Sidebar */}
