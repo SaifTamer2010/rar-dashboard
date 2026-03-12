@@ -71,12 +71,27 @@ export async function POST() {
 
     const totalLeads = await Lead.countDocuments(dateMatch);
 
+    const lastLead = await Lead.findOne()
+      .sort({ createdAt: -1 })
+      .populate("userId", "name")
+      .populate("campaignId", "name");
+
     const message = formatDashboardMessage(
       byUser,
       byCampaign,
       totalLeads,
+      lastLead
+        ? {
+            userId: { name: (lastLead.userId as any)?.name || "Unknown" },
+            campaignId: {
+              name: (lastLead.campaignId as any)?.name || "Unknown",
+            },
+            createdAt: new Date(lastLead.createdAt).toISOString(),
+          }
+        : null,
       session.user.name,
     );
+
     await sendTelegramMessage(message);
 
     return NextResponse.json({ success: true });

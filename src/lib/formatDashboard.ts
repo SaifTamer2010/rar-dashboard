@@ -27,6 +27,11 @@ export function formatDashboardMessage(
   byUser: StatRow[],
   byCampaign: StatRow[],
   totalLeads: number,
+  lastLead: {
+    userId: { name: string };
+    campaignId: { name: string };
+    createdAt: string;
+  } | null,
   sentBy: String,
 ): string {
   const userLines = byUser
@@ -40,14 +45,15 @@ export function formatDashboardMessage(
   const totalLine = toEmojiNumber(totalLeads);
 
   return `
-==============================
-    POWER RINGERS 
-==============================
+POWER RINGERS
+===========================
 ${userLines}
-==============================
+————————————————
 Total Leads ${totalLine}
-==============================
+————————————————
 ${campaignLines}
+————————————————
+Last Lead: ${lastLead?.userId.name} on ${lastLead?.campaignId.name} at ${lastLead?.createdAt ? new Date(lastLead.createdAt).toLocaleTimeString() : ""}
 ==============================
-sent by : ${sentBy}`;
+Sent By: ${sentBy}`;
 }

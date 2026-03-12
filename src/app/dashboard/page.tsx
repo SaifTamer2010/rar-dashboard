@@ -150,6 +150,7 @@ export default function DashboardPage() {
       byUser,
       byCampaign,
       byTotal,
+      lastLead,
       "eldawlyyyy",
     );
     navigator.clipboard.writeText(message);
