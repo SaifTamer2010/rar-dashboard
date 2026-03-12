@@ -118,7 +118,7 @@ export default function BotPage() {
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto sticky left-0 top-0">
+        <div className="flex-1 overflow-y-auto sticky left-0 top-0 max-h-screen">
           {sortedConvos.length === 0 ? (
             <p className="text-gray-500 text-sm p-4">No messages yet</p>
           ) : (
