@@ -112,13 +112,13 @@ export default function BotPage() {
       {/* Sidebar — conversation list */}
       <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-800">
-          <h1 className="text-lg font-bold">🤖 Bot Inbox</h1>
+          <h1 className="text-lg font-bold">Eldawly Inbox</h1>
           <p className="text-gray-400 text-xs mt-1">
             {sortedConvos.length} conversations
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto sticky left-0 top-0">
           {sortedConvos.length === 0 ? (
             <p className="text-gray-500 text-sm p-4">No messages yet</p>
           ) : (
