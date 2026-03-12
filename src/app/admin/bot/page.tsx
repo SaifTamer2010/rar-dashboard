@@ -31,8 +31,41 @@ export default function BotPage() {
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [newChatId, setNewChatId] = useState("");
+  const [newChatMessage, setNewChatMessage] = useState("");
+  const [newChatSending, setNewChatSending] = useState(false);
+  const [newChatError, setNewChatError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { status } = useAdminGuard();
+
+  async function handleNewChat() {
+    if (!newChatId.trim() || !newChatMessage.trim()) return;
+    setNewChatSending(true);
+    setNewChatError("");
+
+    const res = await fetch("/api/telegram/reply", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: parseInt(newChatId),
+        text: newChatMessage,
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json();
+    setNewChatSending(false);
+
+    if (!res.ok) {
+      setNewChatError(data.error || "Failed to send");
+      return;
+    }
+
+    setNewChatOpen(false);
+    setNewChatId("");
+    setNewChatMessage("");
+    setSelectedChatId(parseInt(newChatId));
+  }
 
   useEffect(() => {
     fetch("/api/telegram/messages?limit=50&skip=0")
@@ -126,6 +159,20 @@ export default function BotPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          <div className="p-4 border-b border-gray-800 flex-shrink-0 flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold">Eldawly Inbox</h1>
+              <p className="text-gray-400 text-xs mt-1">
+                {sortedConvos.length} conversations
+              </p>
+            </div>
+            <button
+              onClick={() => setNewChatOpen(true)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-sm transition"
+            >
+              + New
+            </button>
+          </div>
           {sortedConvos.length === 0 ? (
             <p className="text-gray-500 text-sm p-4">No messages yet</p>
           ) : (
@@ -235,6 +282,74 @@ export default function BotPage() {
           </>
         )}
       </div>
+      {newChatOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-1">New Chat</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Enter a Telegram chat ID to start a conversation.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">
+                  Chat ID
+                </label>
+                <input
+                  type="text"
+                  value={newChatId}
+                  onChange={(e) => setNewChatId(e.target.value)}
+                  placeholder="e.g. 123456789"
+                  className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Use a positive number for users, negative for groups
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">
+                  First Message
+                </label>
+                <textarea
+                  value={newChatMessage}
+                  onChange={(e) => setNewChatMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  rows={3}
+                  className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {newChatError && (
+                <p className="text-red-400 text-sm">{newChatError}</p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setNewChatOpen(false);
+                    setNewChatError("");
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleNewChat}
+                  disabled={
+                    newChatSending ||
+                    !newChatId.trim() ||
+                    !newChatMessage.trim()
+                  }
+                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold transition"
+                >
+                  {newChatSending ? "Sending..." : "Start Chat"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
