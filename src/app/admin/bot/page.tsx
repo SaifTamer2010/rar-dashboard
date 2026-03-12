@@ -164,7 +164,7 @@ export default function BotPage() {
         ) : (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-gray-800 bg-gray-900">
+            <div className="p-4 border-b border-gray-800 bg-gray-900 sticky h-screen left-0">
               <h2 className="font-bold">
                 {selectedConvo.chatType === "private" ? "👤" : "👥"}{" "}
                 {selectedConvo.chatName || `Chat ${selectedConvo.chatId}`}
