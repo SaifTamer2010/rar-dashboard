@@ -84,7 +84,9 @@ export default function DashboardPage() {
     fetchStats();
 
     const channel = pusherClient.subscribe("leads-channel");
-
+    channel.bind("force-refresh", () => {
+      window.location.reload();
+    });
     channel.bind(
       "lead-added",
       async (payload: { userName: string; userId: string }) => {
@@ -312,6 +314,14 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
+      )}
+      {session?.user?.role === "admin" && (
+        <button
+          onClick={() => fetch("/api/admin/force-refresh", { method: "POST" })}
+          className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm transition"
+        >
+          🔄 Force Refresh
+        </button>
       )}
       <CampaignModal
         open={modalOpen}
