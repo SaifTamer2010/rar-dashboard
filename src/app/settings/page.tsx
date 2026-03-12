@@ -96,6 +96,12 @@ export default function SettingsPage() {
       return;
     }
 
+    const duration = await getAudioDuration(file);
+    if (duration > 7) {
+      setSoundMsg("Sound must be 7 seconds or less.");
+      return;
+    }
+
     setSoundLoading(true);
     setSoundMsg("");
 
@@ -123,6 +129,17 @@ export default function SettingsPage() {
     };
 
     reader.readAsDataURL(file);
+  }
+
+  function getAudioDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      const audio = document.createElement("audio");
+      audio.src = URL.createObjectURL(file);
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(audio.src);
+        resolve(audio.duration);
+      };
+    });
   }
 
   async function handleSoundDelete() {
