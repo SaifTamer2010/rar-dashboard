@@ -33,7 +33,7 @@ export default function BotPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/telegram/messages")
+    fetch("/api/telegram/messages?limit=50&skip=0")
       .then((r) => r.json())
       .then((data) => {
         const convos: Record<number, Conversation> = {};
