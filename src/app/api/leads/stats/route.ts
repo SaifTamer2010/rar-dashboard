@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     }
 
     const byUser = await User.aggregate([
-      { $match: { role: "user" } },
+      { $match: { role: { $in: ["user", "admin"] } } },
       {
         $lookup: {
           from: "leads",
