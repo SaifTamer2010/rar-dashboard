@@ -25,7 +25,7 @@ export async function POST() {
     const dateMatch = { createdAt: { $gte: start } };
 
     const byUser = await User.aggregate([
-      { $match: { role: "user" } },
+      { $match: { role: { $in: ["user", "admin"] } } },
       {
         $lookup: {
           from: "leads",
