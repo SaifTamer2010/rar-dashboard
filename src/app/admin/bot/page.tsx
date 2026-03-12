@@ -108,17 +108,17 @@ export default function BotPage() {
   const selectedConvo = selectedChatId ? conversations[selectedChatId] : null;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex">
-      {/* Sidebar — conversation list */}
-      <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col">
-        <div className="p-4 border-b border-gray-800">
+    <div className="h-screen bg-gray-950 text-white flex overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+        <div className="p-4 border-b border-gray-800 flex-shrink-0">
           <h1 className="text-lg font-bold">Eldawly Inbox</h1>
           <p className="text-gray-400 text-xs mt-1">
             {sortedConvos.length} conversations
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto sticky left-0 top-0 max-h-screen">
+        <div className="flex-1 overflow-y-auto">
           {sortedConvos.length === 0 ? (
             <p className="text-gray-500 text-sm p-4">No messages yet</p>
           ) : (
@@ -155,8 +155,8 @@ export default function BotPage() {
         </div>
       </div>
 
-      {/* Main — message thread */}
-      <div className="flex-1 flex flex-col">
+      {/* Main */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {!selectedConvo ? (
           <div className="flex-1 flex items-center justify-center">
             <p className="text-gray-500">Select a conversation</p>
@@ -164,7 +164,7 @@ export default function BotPage() {
         ) : (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-gray-800 bg-gray-900 sticky h-screen left-0">
+            <div className="p-4 border-b border-gray-800 bg-gray-900 flex-shrink-0">
               <h2 className="font-bold">
                 {selectedConvo.chatType === "private" ? "👤" : "👥"}{" "}
                 {selectedConvo.chatName || `Chat ${selectedConvo.chatId}`}
@@ -208,7 +208,7 @@ export default function BotPage() {
             </div>
 
             {/* Reply box */}
-            <div className="p-4 border-t border-gray-800 bg-gray-900 flex gap-3">
+            <div className="p-4 border-t border-gray-800 bg-gray-900 flex gap-3 flex-shrink-0">
               <input
                 type="text"
                 value={replyText}
