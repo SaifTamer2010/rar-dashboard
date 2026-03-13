@@ -231,7 +231,7 @@ export default function DashboardPage() {
                 className="w-full grid grid-cols-[2fr_1fr] px-4 font-semibold text-md"
               >
                 <h1>{row.count}</h1>
-                <h1>{row.count != 2 ? row.name : `${row.name} Fala7`}</h1>
+                <h1>{row.count == 2 ? row.name : `${row.name} Fala7`}</h1>
               </div>
             ))}
             {loading && (
