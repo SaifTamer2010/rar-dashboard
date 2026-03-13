@@ -97,8 +97,8 @@ export default function SettingsPage() {
     }
 
     const duration = await getAudioDuration(file);
-    if (duration > 7) {
-      setSoundMsg("Sound must be 7 seconds or less.");
+    if (duration > 10) {
+      setSoundMsg("Sound must be 10 seconds or less.");
       return;
     }
 
