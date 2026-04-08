@@ -12,6 +12,7 @@ interface LastLead {
 }
 
 interface LeadsState {
+  list: any[];
   byUser: StatRow[];
   byCampaign: StatRow[];
   totalLeads: number;
@@ -21,6 +22,7 @@ interface LeadsState {
 }
 
 const initialState: LeadsState = {
+  list: [],
   byUser: [],
   byCampaign: [],
   totalLeads: 0,
@@ -34,7 +36,66 @@ export const fetchLeadsStats = createAsyncThunk(
   async () => {
     const res = await fetch("/api/leads/stats");
     const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to fetch stats");
     return data;
+  }
+);
+
+export const fetchLeads = createAsyncThunk(
+  "leads/fetchLeads",
+  async () => {
+    const res = await fetch("/api/admin/leads");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to fetch leads");
+    return data.leads || [];
+  }
+);
+
+export const addLead = createAsyncThunk(
+  "leads/addLead",
+  async (leadData: any, { dispatch }) => {
+    const res = await fetch("/api/admin/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(leadData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to add lead");
+    // Refresh stats to ensure dashboard is in sync
+    dispatch(fetchLeadsStats());
+    return data.lead;
+  }
+);
+
+export const updateLead = createAsyncThunk(
+  "leads/updateLead",
+  async ({ id, data }: { id: string; data: any }, { dispatch }) => {
+    const res = await fetch(`/api/admin/leads/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const resData = await res.json();
+    if (!res.ok) throw new Error(resData.message || "Failed to update lead");
+    // Refresh stats to ensure dashboard is in sync
+    dispatch(fetchLeadsStats());
+    return resData.lead;
+  }
+);
+
+export const deleteLead = createAsyncThunk(
+  "leads/deleteLead",
+  async (id: string, { dispatch }) => {
+    const res = await fetch(`/api/admin/leads/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to delete lead");
+    }
+    // Refresh stats to ensure dashboard is in sync
+    dispatch(fetchLeadsStats());
+    return id;
   }
 );
 
@@ -62,6 +123,22 @@ const leadsSlice = createSlice({
       .addCase(fetchLeadsStats.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message || "Something went wrong";
+      })
+      // Leads List
+      .addCase(fetchLeads.fulfilled, (state, action) => {
+        state.list = action.payload;
+      })
+      .addCase(addLead.fulfilled, (state, action) => {
+        state.list.push(action.payload);
+      })
+      .addCase(updateLead.fulfilled, (state, action) => {
+        const index = state.list.findIndex((l) => l._id === action.payload._id);
+        if (index !== -1) {
+          state.list[index] = action.payload;
+        }
+      })
+      .addCase(deleteLead.fulfilled, (state, action) => {
+        state.list = state.list.filter((l) => l._id !== action.payload);
       });
   },
 });

@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { setUser, clearUser } from "@/store/slices/authSlice";
+import { Toaster } from "react-hot-toast";
 
 function SessionSync() {
   const { data: session } = useSession();
@@ -35,6 +36,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <Provider store={store}>
         <SessionSync />
         {children}
+        <Toaster
+          position="bottom-left"
+          toastOptions={{
+            style: {
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #1e293b",
+            },
+            duration: 5000,
+          }}
+        />
       </Provider>
     </SessionProvider>
   );

@@ -3,6 +3,7 @@ import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 export interface Campaign {
   _id: string;
   name: string;
+  createdAt: string;
 }
 
 interface CampaignsState {
@@ -20,9 +21,53 @@ const initialState: CampaignsState = {
 export const fetchCampaigns = createAsyncThunk(
   "campaigns/fetchCampaigns",
   async () => {
-    const res = await fetch("/api/campaigns");
+    // Admin uses /api/admin/campaigns to ensure all campaigns are returned
+    const res = await fetch("/api/admin/campaigns");
     const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to fetch campaigns");
     return data.campaigns || [];
+  }
+);
+
+export const addCampaign = createAsyncThunk(
+  "campaigns/addCampaign",
+  async (campaignData: any) => {
+    const res = await fetch("/api/admin/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(campaignData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to add campaign");
+    return data.campaign;
+  }
+);
+
+export const updateCampaign = createAsyncThunk(
+  "campaigns/updateCampaign",
+  async ({ id, data }: { id: string; data: any }) => {
+    const res = await fetch(`/api/admin/campaigns/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const resData = await res.json();
+    if (!res.ok) throw new Error(resData.message || "Failed to update campaign");
+    return resData.campaign;
+  }
+);
+
+export const deleteCampaign = createAsyncThunk(
+  "campaigns/deleteCampaign",
+  async (id: string) => {
+    const res = await fetch(`/api/admin/campaigns/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to delete campaign");
+    }
+    return id;
   }
 );
 
@@ -47,6 +92,18 @@ const campaignsSlice = createSlice({
       .addCase(fetchCampaigns.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message || "Something went wrong";
+      })
+      .addCase(addCampaign.fulfilled, (state, action) => {
+        state.list.push(action.payload);
+      })
+      .addCase(updateCampaign.fulfilled, (state, action) => {
+        const index = state.list.findIndex((c) => c._id === action.payload._id);
+        if (index !== -1) {
+          state.list[index] = action.payload;
+        }
+      })
+      .addCase(deleteCampaign.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c._id !== action.payload);
       });
   },
 });
