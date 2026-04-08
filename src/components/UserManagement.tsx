@@ -14,6 +14,44 @@ interface UserFormProps {
   isEdit?: boolean;
 }
 
+const PlaySoundButton = ({ url }: { url: string }) => {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const toggle = () => {
+    if (playing) {
+      audioRef.current?.pause();
+      setPlaying(false);
+    } else {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(url);
+        audioRef.current.onended = () => setPlaying(false);
+      }
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      className={`p-2 rounded-full transition-colors ${playing ? "bg-red-500 hover:bg-red-600" : "bg-green-600 hover:bg-green-700"
+        }`}
+      title={playing ? "Stop" : "Play Sound"}
+    >
+      {playing ? (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="6" width="12" height="12" />
+        </svg>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      )}
+    </button>
+  );
+};
+
 const UserForm: React.FC<UserFormProps> = ({
   initialData = {},
   onSubmit,
@@ -267,21 +305,25 @@ const UserManagement: React.FC = () => {
           <h1 className="py-2 px-4 border-b">Name</h1>
           <h1 className="py-2 px-4 border-b">Role</h1>
           <h1 className="py-2 px-4 border-b">Telegram Username</h1>
-          <h1 className="py-2 px-4 border-b">Sound URL</h1>
+          <h1 className="py-2 px-4 border-b">Sound</h1>
           <h1 className="py-2 px-4 border-b">Actions</h1>
         </div>
 
 
         {users.map((user) => (
-          <div key={user._id.toString()} className="grid grid-cols-5 border-b border-slate-700 mb-2 pb-2">
+          <div key={user._id.toString()} className="grid grid-cols-5 border-b border-slate-700 mb-2 pb-2 min-w-[80%]">
             <p className="py-2 px-4">{user.name}</p>
             <p className="py-2 px-4">{user.role}</p>
             <p className="py-2 px-4">
               {user.telegramUsername || "N/A"}
             </p>
-            <p className="py-2 px-4">
-              {user.soundUrl || "N/A"}
-            </p>
+            <div className="py-2 px-4">
+              {user.soundUrl ? (
+                <PlaySoundButton url={user.soundUrl} />
+              ) : (
+                <span className="text-gray-500">N/A</span>
+              )}
+            </div>
             <p className="py-2 px-4">
               <button
                 onClick={() => setEditingUser(user)}
