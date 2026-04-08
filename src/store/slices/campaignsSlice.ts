@@ -21,8 +21,7 @@ const initialState: CampaignsState = {
 export const fetchCampaigns = createAsyncThunk(
   "campaigns/fetchCampaigns",
   async () => {
-    // Admin uses /api/admin/campaigns to ensure all campaigns are returned
-    const res = await fetch("/api/admin/campaigns");
+    const res = await fetch("/api/campaigns");
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to fetch campaigns");
     return data.campaigns || [];

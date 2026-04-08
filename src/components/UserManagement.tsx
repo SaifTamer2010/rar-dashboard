@@ -6,6 +6,19 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUsers, addUser, updateUser, deleteUser } from "@/store/slices/usersSlice";
 import { IUser } from "@/models/User";
 import toast from "react-hot-toast";
+import { 
+  Pencil, 
+  Trash2, 
+  Plus, 
+  X, 
+  Play, 
+  Square, 
+  User as UserIcon, 
+  Shield, 
+  Link as LinkIcon, 
+  Music,
+  UserPlus
+} from "lucide-react";
 
 type Role = "admin" | "user" | "viewer";
 
@@ -37,19 +50,14 @@ const PlaySoundButton = ({ url }: { url: string }) => {
   return (
     <button
       onClick={toggle}
-      className={`p-2 rounded-full transition-colors ${playing ? "bg-red-500 hover:bg-red-600" : "bg-green-600 hover:bg-green-700"
-        }`}
+      className={`p-2.5 rounded-xl transition-all border-2 ${
+        playing 
+        ? "bg-red-500/20 border-red-500/40 text-red-400" 
+        : "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30"
+      }`}
       title={playing ? "Stop" : "Play Sound"}
     >
-      {playing ? (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <rect x="6" y="6" width="12" height="12" />
-        </svg>
-      ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8 5v14l11-7z" />
-        </svg>
-      )}
+      {playing ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
     </button>
   );
 };
@@ -81,100 +89,111 @@ const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <motion.form
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
       onSubmit={handleSubmit}
-      className="p-4 bg-slate-900 shadow-md rounded-lg"
+      className="p-8 bg-slate-900/90 backdrop-blur-3xl border-2 border-blue-500/20 rounded-[2.5rem] shadow-2xl space-y-6 text-left"
     >
-      <h3 className="text-xl font-semibold mb-4 text-white">
-        {isEdit ? "Edit User" : "Add New User"}
-      </h3>
-      <div className="mb-4">
-        <label htmlFor="name" className="block text-sm font-medium text-gray-300">
-          Name
-        </label>
-        <input
-          type="text"
-          id="name"
-          className="mt-1 block w-full border border-gray-700 rounded-md shadow-sm p-2 bg-slate-900 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-2xl font-black italic uppercase italic text-white flex items-center gap-3">
+          {isEdit ? <Pencil className="w-6 h-6 text-blue-500" /> : <UserPlus className="w-6 h-6 text-emerald-500" />}
+          {isEdit ? "Edit Personnel" : "Deploy User"}
+        </h3>
+        <button type="button" onClick={onCancel} className="text-gray-500 hover:text-white transition-colors">
+          <X className="w-6 h-6" />
+        </button>
       </div>
-      <div className="mb-4">
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Password {isEdit && "(leave blank to keep current)"}
-        </label>
-        <input
-          type="password"
-          id="password"
-          className="mt-1 block w-full border border-gray-700 rounded-md shadow-sm p-2 bg-slate-900 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          {...(!isEdit && { required: true })}
-        />
+
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">Identity Name</label>
+          <div className="relative">
+            <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+            <input
+              type="text"
+              className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-12 pr-4 py-4 text-gray-200 outline-none transition-all"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">
+            Access Code {isEdit && " (Optional Override)"}
+          </label>
+          <input
+            type="password"
+            className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl px-5 py-4 text-gray-200 outline-none transition-all placeholder:text-gray-700"
+            value={password}
+            placeholder="••••••••"
+            onChange={(e) => setPassword(e.target.value)}
+            {...(!isEdit && { required: true })}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">Permissions Level</label>
+            <div className="relative">
+              <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+              <select
+                className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-12 pr-4 py-4 text-gray-200 outline-none transition-all appearance-none"
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
+              >
+                <option value="user">USER</option>
+                <option value="admin">ADMIN</option>
+                <option value="viewer">VIEWER</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">Telegram Comms</label>
+            <div className="relative">
+              <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+              <input
+                type="text"
+                className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-12 pr-4 py-4 text-gray-200 outline-none transition-all"
+                value={telegramUsername}
+                placeholder="username"
+                onChange={(e) => setTelegramUsername(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">Pulse Sound URL</label>
+          <div className="relative">
+            <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+            <input
+              type="text"
+              className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-12 pr-4 py-4 text-gray-200 outline-none transition-all"
+              value={soundUrl}
+              placeholder="https://..."
+              onChange={(e) => setSoundUrl(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
-      <div className="mb-4">
-        <label htmlFor="role" className="block text-sm font-medium text-gray-300">
-          Role
-        </label>
-        <select
-          id="role"
-          className="mt-1 block w-full border border-gray-700 rounded-md shadow-sm p-2 bg-slate-900 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          value={role}
-          onChange={(e) => setRole(e.target.value as Role)}
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-          <option value="viewer">Viewer</option>
-        </select>
-      </div>
-      <div className="mb-4">
-        <label
-          htmlFor="telegramUsername"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Telegram Username
-        </label>
-        <input
-          type="text"
-          id="telegramUsername"
-          className="mt-1 block w-full border border-gray-700 rounded-md shadow-sm p-2 bg-slate-900 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          value={telegramUsername}
-          onChange={(e) => setTelegramUsername(e.target.value)}
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="soundUrl" className="block text-sm font-medium text-gray-300">
-          Sound URL
-        </label>
-        <input
-          type="text"
-          id="soundUrl"
-          className="mt-1 block w-full border border-gray-700 rounded-md shadow-sm p-2 bg-slate-900 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          value={soundUrl}
-          onChange={(e) => setSoundUrl(e.target.value)}
-        />
-      </div>
-      <div className="flex justify-end space-x-2">
+
+      <div className="flex gap-4 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-700 rounded-md text-white hover:bg-gray-800 transition-colors cursor-pointer"
+          className="flex-1 px-6 py-4 border-2 border-white/5 hover:bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all"
         >
-          Cancel
+          Abort
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
+          className="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-blue-500/20"
         >
-          {isEdit ? "Save Changes" : "Add User"}
+          {isEdit ? "Confirm Edit" : "Execute Deployment"}
         </button>
       </div>
     </motion.form>
@@ -185,7 +204,7 @@ const UserManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const { list: users, status, error } = useAppSelector((state) => state.users);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<IUser | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
 
   useEffect(() => {
     if (status === "idle") {
@@ -198,20 +217,7 @@ const UserManagement: React.FC = () => {
     
     toast.promise(promise, {
       loading: "Adding user...",
-      success: (user) => (
-        <div className="flex items-center gap-4">
-          <span>User added successfully!</span>
-          <button
-            onClick={() => {
-              dispatch(deleteUser(user._id.toString()));
-              toast.dismiss();
-            }}
-            className="text-blue-400 hover:underline text-sm font-bold ml-2"
-          >
-            UNDO
-          </button>
-        </div>
-      ),
+      success: "User added successfully!",
       error: (err) => err.message || "Failed to add user",
     });
 
@@ -223,25 +229,11 @@ const UserManagement: React.FC = () => {
 
   const handleEditUser = async (userData: any) => {
     if (!editingUser) return;
-    const oldData = { ...editingUser };
     const promise = dispatch(updateUser({ id: editingUser._id.toString(), data: userData })).unwrap();
 
     toast.promise(promise, {
       loading: "Updating user...",
-      success: (updatedUser) => (
-        <div className="flex items-center gap-4">
-          <span>User updated successfully!</span>
-          <button
-            onClick={() => {
-              dispatch(updateUser({ id: updatedUser._id.toString(), data: oldData }));
-              toast.dismiss();
-            }}
-            className="text-blue-400 hover:underline text-sm font-bold ml-2"
-          >
-            UNDO
-          </button>
-        </div>
-      ),
+      success: "User updated successfully!",
       error: (err) => err.message || "Failed to update user",
     });
 
@@ -260,157 +252,123 @@ const UserManagement: React.FC = () => {
 
       toast.promise(promise, {
         loading: "Deleting user...",
-        success: (deletedId) => (
-          <div className="flex items-center gap-4">
-            <span>User deleted successfully!</span>
-            <button
-              onClick={() => {
-                dispatch(addUser(userToDelete));
-                toast.dismiss();
-              }}
-              className="text-blue-400 hover:underline text-sm font-bold ml-2"
-            >
-              UNDO
-            </button>
-          </div>
-        ),
+        success: "User deleted successfully!",
         error: (err) => err.message || "Failed to delete user",
       });
     }
   };
 
   if (status === "loading" && users.length === 0) {
-    return <p className="text-white">Loading users...</p>;
-  }
-
-  if (status === "failed") {
     return (
-      <div className="text-red-500 p-4 bg-red-500/10 rounded-lg">
-        <p>Error: {error}</p>
-        <button 
-          onClick={() => dispatch(fetchUsers())}
-          className="mt-2 px-3 py-1 bg-red-500 text-white rounded-md text-sm"
-        >
-          Retry
-        </button>
+      <div className="flex flex-col items-center justify-center p-20 space-y-4">
+        <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+        <p className="text-blue-400 text-xs font-black uppercase tracking-widest">Scanning Network...</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold text-white">User List</h2>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-left">
+          <h2 className="text-3xl font-black italic uppercase italic text-white">Network Personnel</h2>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Authorized Access Control</p>
+        </div>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          className="flex items-center gap-3 px-6 py-4 bg-emerald-600/10 border-2 border-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
         >
-          Add User
+          <Plus className="w-4 h-4" /> Add Personnel
         </motion.button>
       </div>
 
       <AnimatePresence>
-        {showAddForm && (
+        {(showAddForm || editingUser) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-[100] p-4"
           >
-            <div className="bg-slate-900 p-4 rounded-lg shadow-xl w-full max-w-md">
-              <UserForm onSubmit={handleAddUser} onCancel={() => setShowAddForm(false)} />
+            <div className="w-full max-w-2xl">
+              {showAddForm ? (
+                <UserForm onSubmit={handleAddUser} onCancel={() => setShowAddForm(false)} />
+              ) : (
+                <UserForm
+                  initialData={editingUser}
+                  onSubmit={handleEditUser}
+                  onCancel={() => setEditingUser(null)}
+                  isEdit={true}
+                />
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {editingUser && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-          >
-            <div className="bg-slate-900 p-4 rounded-lg shadow-xl w-full max-w-md">
-              <UserForm
-                initialData={editingUser}
-                onSubmit={handleEditUser}
-                onCancel={() => setEditingUser(null)}
-                isEdit={true}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="overflow-x-auto h-[calc(100vh-20rem)]">
-        <div className="grid grid-cols-5 font-bold text-white border-b border-gray-700 mb-4 pb-2">
-          <h1 className="px-4">Name</h1>
-          <h1 className="px-4">Role</h1>
-          <h1 className="px-4 text-xs md:text-base">Telegram</h1>
-          <h1 className="px-4">Sound</h1>
-          <h1 className="px-4">Actions</h1>
+      <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border-2 border-blue-500/10 overflow-hidden shadow-2xl">
+        <div className="grid grid-cols-5 font-black text-blue-400 text-[10px] uppercase tracking-[0.4em] bg-slate-950/40 px-8 py-6 border-b-2 border-blue-500/10 text-left">
+          <div className="flex items-center gap-2 px-4"><UserIcon className="w-3 h-3" /> Identity</div>
+          <div className="flex items-center gap-2 px-4"><Shield className="w-3 h-3" /> clearance</div>
+          <div className="flex items-center gap-2 px-4">comms</div>
+          <div className="flex items-center gap-2 px-4">Pulse</div>
+          <div className="text-right px-4">Actions</div>
         </div>
 
-        <motion.div layout className="space-y-2 min-w-[80%]">
-          <AnimatePresence>
-            {users.map((user) => (
-              <motion.div
-                layout
-                key={user._id.toString()}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.15 }}
-                className="grid grid-cols-5 items-center border-b border-gray-800/50 hover:bg-white/5 transition-colors pb-2"
-              >
-                <p className="px-4 text-gray-200">{user.name}</p>
-                <p className="px-4">
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
-                    user.role === "admin" ? "bg-red-500/20 text-red-400" :
-                    user.role === "viewer" ? "bg-blue-500/20 text-blue-400" :
-                    "bg-green-500/20 text-green-400"
-                  }`}>
-                    {user.role}
-                  </span>
+        <div className="divide-y-2 divide-blue-500/5 max-h-[800px] overflow-y-auto custom-scrollbar">
+          {users.map((user) => (
+            <motion.div
+              layout
+              key={user._id.toString()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-5 items-center px-8 py-6 hover:bg-white/5 transition-all group text-left"
+            >
+              <div className="px-4">
+                <p className="text-lg font-black italic uppercase text-gray-100">{user.name}</p>
+              </div>
+              <div className="px-4">
+                <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 ${
+                  user.role === "admin" ? "bg-red-500/10 border-red-500/40 text-red-400" :
+                  user.role === "viewer" ? "bg-blue-500/10 border-blue-500/40 text-blue-400" :
+                  "bg-emerald-500/10 border-emerald-500/40 text-emerald-400"
+                }`}>
+                  {user.role}
+                </span>
+              </div>
+              <div className="px-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  {user.telegramUsername ? `@${user.telegramUsername}` : "OFFLINE"}
                 </p>
-                <p className="px-4 text-gray-400 truncate text-xs md:text-sm">
-                  {user.telegramUsername || "N/A"}
-                </p>
-                <div className="px-4">
-                  {user.soundUrl ? (
-                    <PlaySoundButton url={user.soundUrl} />
-                  ) : (
-                    <span className="text-gray-600">N/A</span>
-                  )}
-                </div>
-                <div className="px-4 flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setEditingUser(user)}
-                    className="p-1.5 bg-blue-500/20 text-blue-400 rounded-md hover:bg-blue-500/30 transition-colors"
-                    title="Edit"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleDeleteUser(user._id.toString())}
-                    className="p-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30 transition-colors"
-                    title="Delete"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+              </div>
+              <div className="px-4">
+                {user.soundUrl ? (
+                  <PlaySoundButton url={user.soundUrl} />
+                ) : (
+                  <span className="text-gray-700 font-bold text-[10px] uppercase">Muted</span>
+                )}
+              </div>
+              <div className="px-4 flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setEditingUser(user)}
+                  className="p-2.5 bg-blue-500/10 border-2 border-blue-500/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-xl transition-all"
+                  title="Modify"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(user._id.toString())}
+                  className="p-2.5 bg-red-500/10 border-2 border-red-500/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl transition-all"
+                  title="Terminate"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </div>
   );
