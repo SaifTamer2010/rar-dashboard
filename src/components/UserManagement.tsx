@@ -203,10 +203,10 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: ObjectId) => {
+  const handleDeleteUser = async (userId: string) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        const response = await fetch(`/api/admin/users/${userId.toString()}`, {
+        const response = await fetch(`/api/admin/users/${userId}`, {
           method: "DELETE",
         });
         if (!response.ok) {
@@ -290,7 +290,7 @@ const UserManagement: React.FC = () => {
                 Edit
               </button>
               <button
-                onClick={() => handleDeleteUser(user._id)}
+                onClick={() => handleDeleteUser(user._id.toString())}
                 className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               >
                 Delete

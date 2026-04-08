@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
-import { pusherClient } from "@/lib/pusher";
+import { pusherClient } from "@/lib/pusher-client";
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { formatDashboardMessage } from "@/lib/formatDashboard";

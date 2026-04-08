@@ -6,12 +6,12 @@ import User from "@/models/User";
 
 export const authOptions = {
   trustHost: true,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt" as const },
   pages: {
     signIn: "/sign-in",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user: any }) {
       if (user) {
         token.userId = user.id as string;
         token.name = user.name ?? "";
@@ -19,7 +19,7 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (token) {
         session.user.id = token.userId;
         session.user.name = token.name as string;

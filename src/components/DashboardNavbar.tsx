@@ -5,7 +5,7 @@ import { signOut } from 'next-auth/react'
 
 const DashboardNavbar = () => {
     return (
-        <div className="w-full flex justify-between items-center mb-5 bg-slate-900 p-4 rounded-4xl backdrop-blur-md sticky top-0">
+        <div className="w-full flex justify-between items-center mb-5 bg-slate-900 p-4 rounded-2xl backdrop-blur-md sticky top-0">
             <h1 className="text-xl md:text-2xl font-bold text-gray-300"><span className='text-gray-400'>Daily Dashboard</span> {`/`} Power Ringers</h1>
             <div className=" flex justify-between gap-4">
                 <Link
