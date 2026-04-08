@@ -5,18 +5,18 @@ import { useSession } from "next-auth/react";
 import { useAppDispatch } from "@/store/hooks";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  History, 
-  Trash2, 
-  Camera, 
-  Play, 
-  Check, 
-  Upload, 
-  Activity, 
-  Lock 
+import {
+  User,
+  Bell,
+  Shield,
+  History,
+  Trash2,
+  Camera,
+  Play,
+  Check,
+  Upload,
+  Activity,
+  Lock
 } from "lucide-react";
 
 interface Lead {
@@ -27,7 +27,7 @@ interface Lead {
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
-  
+
   // Profile
   const [name, setName] = useState("");
   const [telegramUsername, setTelegramUsername] = useState("");
@@ -180,7 +180,7 @@ export default function SettingsPage() {
       <DashboardNavbar />
 
       <div className="max-w-6xl mx-auto space-y-10">
-        <motion.header 
+        <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative py-12 px-8 rounded-[3rem] border-2 border-blue-500/10 bg-slate-900/40 backdrop-blur-2xl overflow-hidden"
@@ -200,7 +200,7 @@ export default function SettingsPage() {
           {/* Left: Profile & Sound */}
           <div className="lg:col-span-8 space-y-10">
             {/* Profile Section */}
-            <motion.section 
+            <motion.section
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl space-y-8"
@@ -262,9 +262,8 @@ export default function SettingsPage() {
               </div>
 
               {profileMsg && (
-                <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${
-                  profileMsg.includes("successfully") ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-red-500/10 border-red-500/40 text-red-400"
-                }`}>
+                <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${profileMsg.includes("successfully") ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-red-500/10 border-red-500/40 text-red-400"
+                  }`}>
                   <Activity className="w-5 h-5 flex-shrink-0" />
                   <p className="text-xs font-black uppercase tracking-widest">{profileMsg}</p>
                 </div>
@@ -284,7 +283,7 @@ export default function SettingsPage() {
             </motion.section>
 
             {/* Sound Section */}
-            <motion.section 
+            <motion.section
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl relative overflow-hidden"
@@ -329,7 +328,7 @@ export default function SettingsPage() {
                     {soundLoading ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <>UPLOAD PULSE <Upload className="w-5 h-5" /></>
+                      <>UPLOAD SOUND <Upload className="w-5 h-5" /></>
                     )}
                   </button>
                 )}
@@ -353,7 +352,7 @@ export default function SettingsPage() {
 
           {/* Right Column: Lead History */}
           <div className="lg:col-span-4">
-            <motion.section 
+            <motion.section
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl h-full relative overflow-hidden"
