@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SessionProvider } from "next-auth/react";
+import { Providers } from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/next";
 
 import "./globals.css";
@@ -40,7 +40,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <Analytics />
-        <SessionProvider>{children}</SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

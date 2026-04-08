@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// import { useCelebration } from "@/hooks/useCelebration";
-
-interface Campaign {
-  _id: string;
-  name: string;
-}
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchCampaigns } from "@/store/slices/campaignsSlice";
 
 interface Props {
   open: boolean;
@@ -15,23 +11,21 @@ interface Props {
 }
 
 export default function CampaignModal({ open, onClose, onSuccess }: Props) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const dispatch = useAppDispatch();
+  const { list: campaigns, status } = useAppSelector((state) => state.campaigns);
+  const fetching = status === "loading";
+
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
-
-  // const { celebrate } = useCelebration();
 
   useEffect(() => {
-    if (!open) return;
-    setSelected("");
-    setFetching(true);
-
-    fetch("/api/campaigns")
-      .then((r) => r.json())
-      .then((data) => setCampaigns(data.campaigns || []))
-      .finally(() => setFetching(false));
-  }, [open]);
+    if (open) {
+      setSelected("");
+      if (status === "idle") {
+        dispatch(fetchCampaigns());
+      }
+    }
+  }, [open, status, dispatch]);
 
   async function handleSubmit() {
     if (!selected) return;

@@ -8,23 +8,15 @@ import { pusherClient } from "@/lib/pusher";
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { formatDashboardMessage } from "@/lib/formatDashboard";
-
-interface StatRow {
-  name: string;
-  count: number;
-}
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchLeadsStats } from "@/store/slices/leadsSlice";
 
 export default function DashboardPage() {
-  const [byUser, setByUser] = useState<StatRow[]>([]);
-  const [byCampaign, setByCampaign] = useState<StatRow[]>([]);
-  const [byTotal, setByTotal] = useState(0);
-  const [lastLead, setLastLead] = useState<{
-    userId: { name: string };
-    campaignId: { name: string };
-    createdAt: string;
-  } | null>(null);
+  const dispatch = useAppDispatch();
+  const { byUser, byCampaign, totalLeads: byTotal, lastLead, status } = useAppSelector((state) => state.leads);
+  const loading = status === "loading";
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const [copied, setCopied] = useState(false);
@@ -40,30 +32,18 @@ export default function DashboardPage() {
     setSoundEnabled(true);
   }
 
-  // Show it at the top of the dashboard
-
   const { data: session } = useSession();
   const isViewer = session?.user?.role === "viewer";
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch("/api/leads/stats");
-      const data = await res.json();
-      setByUser(data.byUser || []);
-      setByCampaign(data.byCampaign || []);
-      setByTotal(data.totalLeads || 0);
-      setLastLead(data.lastLead || null);
-    } catch (error) {
-      console.error("fetch stats error:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchStats = useCallback(() => {
+    dispatch(fetchLeadsStats());
+  }, [dispatch]);
 
   function handleLeadSuccess() {
     setCelebrate(false);
     setTimeout(() => setCelebrate(true), 10); // reset then trigger
     setModalOpen(false);
+    fetchStats();
   }
 
   useEffect(() => {
@@ -92,8 +72,6 @@ export default function DashboardPage() {
       async (payload: { userName: string; userId: string }) => {
         console.log("Pusher event received:", payload);
         fetchStats();
-        console.log(byUser);
-        console.log(byCampaign);
 
         const res = await fetch(`/api/sounds/${payload.userId}`);
         const data = await res.json();
@@ -102,10 +80,7 @@ export default function DashboardPage() {
         if (data.soundUrl) {
           console.log("Playing sound...");
           const audio = new Audio(data.soundUrl);
-          const playResult = await audio
-            .play()
-            .catch((e) => console.log("Play error:", e));
-          // console.log("Play result:", playResult);
+          await audio.play().catch((e) => console.log("Play error:", e));
         } else {
           console.log("No sound URL found");
         }
@@ -145,7 +120,7 @@ export default function DashboardPage() {
     return () => {
       pusherClient.unsubscribe("leads-channel");
     };
-  }, [fetchStats]);
+  }, [fetchStats, lastLead?.userId.name]);
 
   function handleCopy() {
     const message = formatDashboardMessage(
