@@ -33,8 +33,21 @@ const initialState: LeadsState = {
 
 export const fetchLeadsStats = createAsyncThunk(
   "leads/fetchStats",
-  async () => {
-    const res = await fetch("/api/leads/stats");
+  async (params?: { startDate?: string; endDate?: string; allTime?: boolean }) => {
+    let url = "/api/leads/stats";
+    const searchParams = new URLSearchParams();
+    
+    if (params?.allTime) {
+      searchParams.append("allTime", "true");
+    } else if (params?.startDate && params?.endDate) {
+      searchParams.append("startDate", params.startDate);
+      searchParams.append("endDate", params.endDate);
+    }
+
+    if (searchParams.toString()) {
+      url += `?${searchParams.toString()}`;
+    }
+    const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to fetch stats");
     return data;

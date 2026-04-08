@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
-import Trash from "../../../public/trash.svg";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import DashboardNavbar from "@/components/DashboardNavbar";
 
 interface Lead {
   _id: string;
@@ -15,7 +16,7 @@ interface Lead {
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
-
+  
   // Profile
   const [name, setName] = useState("");
   const [telegramUsername, setTelegramUsername] = useState("");
@@ -166,24 +167,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8 mx-auto w-full">
-      <header className="w-full flex justify-between  mb-2">
-        <h1 className="text-xl md:text-3xl font-bold mt-2">Settings</h1>
-        <div className=" flex justify-between gap-4">
-          <Link
-            href="/dashboard"
-            className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-36 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
-          >
-            Dashboard
-          </Link>
-          <button
-            onClick={() => signOut({ callbackUrl: "/sign-in" })}
-            className="text-md md:text-lg font-semibold mb-2 bg-red-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-red-700 transition-all cursor-pointer flex justify-center items-center"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-950 text-white p-2 md:p-6 pb-32">
+      <DashboardNavbar />
 
       {/* Profile Section */}
 

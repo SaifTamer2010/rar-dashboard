@@ -9,13 +9,22 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
-    // searchParams.get("filter") || "today" if you want to toggle between alltime and today's leads
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+    const allTime = searchParams.get("allTime") === "true";
 
-    const filter = "today";
-
-    // Build date filter — day runs from 5 AM UTC (7 AM Egypt) to next 5 AM UTC
     let dateMatch: Record<string, any> = {};
-    if (filter === "today") {
+
+    if (allTime) {
+      dateMatch = {}; // No date filter for all time
+    } else if (startDateParam && endDateParam) {
+      const start = new Date(startDateParam);
+      const end = new Date(endDateParam);
+      // Ensure the end date covers the full day (up to the last second)
+      end.setUTCHours(23, 59, 59, 999);
+      dateMatch = { createdAt: { $gte: start, $lte: end } };
+    } else {
+      // Default to "today" logic if no range provided
       const now = new Date();
       const start = new Date();
       start.setUTCHours(5, 0, 0, 0);
@@ -81,9 +90,7 @@ export async function GET(req: NextRequest) {
       { $sort: { count: -1 } },
     ]);
 
-    const totalLeads = await Lead.countDocuments(
-      filter === "today" ? dateMatch : {},
-    );
+    const totalLeads = await Lead.countDocuments(dateMatch);
 
     const lastLead = await Lead.findOne()
       .sort({ createdAt: -1 })

@@ -2,21 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import UserManagement from "@/components/UserManagement";
 import CampaignManagement from "@/components/CampaignManagement";
 import LeadManagement from "@/components/LeadManagement";
+import DashboardNavbar from "@/components/DashboardNavbar";
 
 const AdminPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "users");
-
-  const tabs = [
-    { id: "users", label: "Users" },
-    { id: "campaigns", label: "Campaigns" },
-    { id: "leads", label: "Leads" },
-  ];
 
   useEffect(() => {
     const tab = searchParams.get("tab") || "users";
@@ -25,14 +22,41 @@ const AdminPage = () => {
     }
   }, [searchParams, activeTab]);
 
+  useEffect(() => {
+    if (status === "unauthenticated" || (status === "authenticated" && session?.user?.role !== "admin")) {
+      router.push("/dashboard");
+    }
+  }, [status, session, router]);
+
+  const tabs = [
+    { id: "users", label: "Users" },
+    { id: "campaigns", label: "Campaigns" },
+    { id: "leads", label: "Leads" },
+  ];
+
+  if (status === "loading") {
+    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">Verifying...</div>;
+  }
+
+  if (session?.user?.role !== "admin") {
+    return null;
+  }
+
+  // const tabs = [
+  //   { id: "users", label: "Users" },
+  //   { id: "campaigns", label: "Campaigns" },
+  //   { id: "leads", label: "Leads" },
+  // ];
+
+
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     router.push(`/admin?tab=${tabId}`, { scroll: false });
   };
 
   return (
-    <div className="bg-slate-800 mx-auto p-4 text-white overflow-hidden">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+    <div className="min-h-screen bg-gray-950 text-white p-2 md:p-6 pb-32">
+      <DashboardNavbar />
 
       <div className="mb-8 border-b border-gray-700">
         <ul className="flex flex-wrap -mb-px text-sm font-medium text-center relative" role="tablist">
