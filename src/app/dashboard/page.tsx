@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import { formatDashboardMessage } from "@/lib/formatDashboard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchLeadsStats } from "@/store/slices/leadsSlice";
+import DashboardNavbar from "@/components/DashboardNavbar";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
@@ -111,7 +112,7 @@ export default function DashboardPage() {
 
       utterance.onend = () => {
         const audio = new Audio("/whip-soundeffect.mp4");
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
       };
 
       window.speechSynthesis.speak(utterance);
@@ -147,24 +148,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8 pb-32">
-      <header className="w-full flex justify-between mb-2">
-        <h1 className="text-xl md:text-3xl font-bold">Dashboard</h1>
-        <div className=" flex justify-between gap-4">
-          <Link
-            href="/settings"
-            className="text-md md:text-xl font-bold mb-2 bg-slate-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-slate-700 transition-all cursor-pointer flex justify-center items-center"
-          >
-            Settings
-          </Link>
-          <button
-            onClick={() => signOut({ callbackUrl: "/sign-in" })}
-            className="text-md md:text-lg font-semibold mb-2 bg-red-800 w-30 h-12 rounded-xl shadow-black shadow-2xl hover:bg-red-700 transition-all cursor-pointer flex justify-center items-center"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-950 text-white p-2 pb-32">
+      <DashboardNavbar />
 
       <div className="flex justify-center h-full w-full items-center">
         {!soundEnabled && (
@@ -178,7 +163,7 @@ export default function DashboardPage() {
 
         <div className="w-[90%] md:w-[40%] height-[80%] bg-[#111828] p-6 rounded-xl">
           <header className="border-b-2 border-dashed font-bold text-center text-2xl p-2">
-            <h1>Power Ringers Daily Dashboard</h1>
+            <h1>Team Dashboard</h1>
             <div className="flex gap-2 justify-center my-2">
               <button
                 onClick={handleCopy}

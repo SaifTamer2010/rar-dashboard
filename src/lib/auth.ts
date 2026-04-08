@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongodb";
 import User from "@/models/User";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const authOptions = {
   trustHost: true,
   session: { strategy: "jwt" },
   pages: {
@@ -61,4 +61,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-});
+};
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);
