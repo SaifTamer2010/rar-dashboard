@@ -44,6 +44,13 @@ export default function SettingsPage() {
   const [soundUrl, setSoundUrl] = useState<string | null>(null);
   const [soundLoading, setSoundLoading] = useState(false);
   const [soundMsg, setSoundMsg] = useState("");
+  
+  // Bot Template
+  const [leadMessageTemplate, setLeadMessageTemplate] = useState("");
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateMsg, setTemplateMsg] = useState("");
+  const [showTestModal, setShowTestModal] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +72,10 @@ export default function SettingsPage() {
     fetch("/api/settings/sound")
       .then((r) => r.json())
       .then((data) => setSoundUrl(data.soundUrl || null));
+
+    fetch("/api/settings/config")
+      .then((r) => r.json())
+      .then((data) => setLeadMessageTemplate(data.leadMessageTemplate || ""));
   }, []);
 
   async function handleProfileSave() {
@@ -165,6 +176,49 @@ export default function SettingsPage() {
     if (audioRef.current) {
       audioRef.current.src = soundUrl;
       audioRef.current.play();
+    }
+  }
+
+  async function handleTemplateSave() {
+    setTemplateLoading(true);
+    setTemplateMsg("");
+
+    const res = await fetch("/api/settings/config", {
+      method: "POST",
+      body: JSON.stringify({ leadMessageTemplate }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json();
+    setTemplateLoading(false);
+
+    if (!res.ok) {
+      setTemplateMsg(data.error || "Failed to save template");
+      return;
+    }
+
+    setTemplateMsg("Template saved successfully!");
+  }
+
+  function getPreviewMessage() {
+    return leadMessageTemplate
+      .replace(/{name}/gi, "@Caveman")
+      .replace(/{campaign}/gi, "MAMMOTH HUNT");
+  }
+
+  async function handleSendTest() {
+    setTemplateLoading(true);
+    const res = await fetch("/api/telegram/send-test", {
+      method: "POST",
+      body: JSON.stringify({ message: getPreviewMessage() }),
+      headers: { "Content-Type": "application/json" },
+    });
+    setTemplateLoading(false);
+    if (res.ok) {
+      setTemplateMsg("Test message sent to Telegram!");
+      setShowTestModal(false);
+    } else {
+      setTemplateMsg("Failed to send test message.");
     }
   }
 
@@ -348,6 +402,77 @@ export default function SettingsPage() {
                 </p>
               )}
             </motion.section>
+
+            {/* Bot Template Section */}
+            <motion.section
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl space-y-6"
+            >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Activity className="w-6 h-6 text-blue-500" />
+                    <h2 className="text-2xl font-black italic uppercase italic">Bot Notification</h2>
+                  </div>
+                  {leadMessageTemplate && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Template Active</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                  Customize what the bot shouts when a lead lands. <br />
+                  Use <code className="text-blue-400 bg-blue-400/10 px-1 py-0.5 rounded">{`{name}`}</code> for hunter name and <code className="text-blue-400 bg-blue-400/10 px-1 py-0.5 rounded">{`{campaign}`}</code> for campaign.
+                </p>
+
+                <div className="space-y-4">
+                  {leadMessageTemplate && (
+                    <div className="bg-slate-950/40 border border-blue-500/10 rounded-xl p-4 space-y-2">
+                       <label className="text-[9px] font-black text-blue-400/50 uppercase tracking-[0.2em]">Saved War Cry:</label>
+                       <p className="text-[11px] text-gray-400 italic">"{getPreviewMessage()}"</p>
+                    </div>
+                  )}
+                  <div className="relative">
+                    <textarea
+                      value={leadMessageTemplate}
+                      onChange={(e) => setLeadMessageTemplate(e.target.value.slice(0, 500))}
+                      placeholder="Example: 🔥 {name} JUST COOKED ON {campaign}! 🔥"
+                      maxLength={500}
+                      className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl px-5 py-4 pb-12 text-gray-200 outline-none transition-all h-32 resize-none custom-scrollbar"
+                    />
+                    <div className="absolute bottom-4 right-5 text-[10px] font-black uppercase tracking-widest text-blue-500/50">
+                      {leadMessageTemplate.length} / 500
+                    </div>
+                  </div>
+
+                  {templateMsg && (
+                    <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${templateMsg.includes("successfully") ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-red-500/10 border-red-500/40 text-red-400"}`}>
+                      <Check className="w-4 h-4 flex-shrink-0" />
+                      <p className="text-xs font-black uppercase tracking-widest">{templateMsg}</p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleTemplateSave}
+                    disabled={templateLoading}
+                    className="flex items-center justify-center gap-4 px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 disabled:opacity-40 text-white rounded-[1.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-500/20 active:scale-95 w-full md:w-auto"
+                  >
+                    {templateLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>SAVE TEMPLATE <Check className="w-5 h-5" /></>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowTestModal(true)}
+                    className="flex items-center justify-center gap-4 px-10 py-5 bg-slate-950/60 border-2 border-white/5 hover:border-blue-500/40 text-gray-400 hover:text-blue-400 rounded-[1.8rem] font-black uppercase tracking-[0.2em] transition-all w-full md:w-auto"
+                  >
+                    PREVIEW MESSAGE <Play className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.section>
           </div>
 
           {/* Right Column: Lead History */}
@@ -395,6 +520,56 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showTestModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTestModal(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-xl bg-slate-900 border-2 border-blue-500/20 rounded-[3rem] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600" />
+              
+              <div className="flex items-center gap-3 mb-6">
+                <Bell className="w-6 h-6 text-blue-500" />
+                <h2 className="text-2xl font-black italic uppercase italic">Bot Preview</h2>
+              </div>
+
+              <div className="bg-slate-950/60 border-2 border-white/5 rounded-2xl p-6 mb-8 min-h-[100px] break-words whitespace-pre-wrap">
+                <p className="text-blue-100 font-medium leading-relaxed">
+                  {leadMessageTemplate ? getPreviewMessage() : "No template set yet..."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setShowTestModal(false)}
+                  className="px-6 py-4 bg-slate-800/50 hover:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Close
+                </button>
+                <button
+                   onClick={handleSendTest}
+                   disabled={!leadMessageTemplate || templateLoading}
+                   className="px-6 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                >
+                  {templateLoading ? "Shouting..." : "Send Real Test"}
+                  {!templateLoading && <Check className="w-4 h-4" />}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

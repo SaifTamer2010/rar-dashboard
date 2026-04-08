@@ -58,7 +58,6 @@ export async function DELETE(
   try {
     await connectToDatabase();
     const { id } = await params;
-    console.log(id)
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {

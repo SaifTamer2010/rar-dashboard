@@ -5,6 +5,11 @@ import { pusherServer } from "@/lib/pusher-server";
 
 export async function POST(req: NextRequest) {
   try {
+    const secretToken = req.headers.get("X-Telegram-Bot-Api-Secret-Token");
+    if (secretToken !== process.env.TELEGRAM_SECRET_TOKEN) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const message = body.message;
 

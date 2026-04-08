@@ -5,7 +5,6 @@ import { connectToDatabase } from "./mongodb";
 import User from "@/models/User";
 
 export const authOptions = {
-  trustHost: true,
   session: { strategy: "jwt" as const },
   pages: {
     signIn: "/sign-in",

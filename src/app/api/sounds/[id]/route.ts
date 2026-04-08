@@ -8,11 +8,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    // console.log("Sound route hit, id:", id); // add this
-
     await connectToDatabase();
     const user = await User.findById(id).select("soundUrl");
-    // console.log("User found:", user); // add this
 
     return NextResponse.json({ soundUrl: user?.soundUrl || null });
   } catch (error) {

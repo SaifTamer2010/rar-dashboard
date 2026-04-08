@@ -13,6 +13,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("force-refresh error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

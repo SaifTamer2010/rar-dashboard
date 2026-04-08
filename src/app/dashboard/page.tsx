@@ -13,6 +13,7 @@ import { fetchLeadsStats } from "@/store/slices/leadsSlice";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Flame, Trophy, TrendingUp, Activity, PlusCircle } from "lucide-react";
+import FeatureUpdateModal from "@/components/FeatureUpdateModal";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [sending, setSending] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [shameActive, setShameActive] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   function enableSound() {
     if (!audioContextRef.current) {
@@ -41,6 +43,15 @@ export default function DashboardPage() {
   const fetchStats = useCallback((params?: { startDate?: string; endDate?: string }) => {
     dispatch(fetchLeadsStats(params));
   }, [dispatch]);
+
+  const handleCloseUpdateModal = useCallback(async () => {
+    setShowUpdateModal(false);
+    try {
+      await fetch("/api/user/check-version", { method: "POST" });
+    } catch (err) {
+      console.error("Failed to mark version as seen", err);
+    }
+  }, []);
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: "",
@@ -85,6 +96,17 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/user/check-version")
+      .then(res => res.json())
+      .then(data => {
+        if (data.showModal) {
+          setShowUpdateModal(true);
+        }
+      })
+      .catch(err => console.error("Version check failed", err));
+  }, []);
+
+  useEffect(() => {
     // Initial fetch handled by dateRange effect
 
     const channel = pusherClient.subscribe("leads-channel");
@@ -107,7 +129,7 @@ export default function DashboardPage() {
         if (data.soundUrl) {
 
           const audio = new Audio(data.soundUrl);
-          await audio.play().catch((e) => console.log("Play error:", e));
+          await audio.play().catch(() => {});
         } else {
 
         }
@@ -144,7 +166,7 @@ export default function DashboardPage() {
     return () => {
       pusherClient.unsubscribe("leads-channel");
     };
-  }, [fetchStats, lastLead?.userId.name, dateRange.start, dateRange.end]);
+  }, [fetchStats, lastLead?.userId?.name, dateRange.start, dateRange.end]);
 
   function handleCopy() {
     const message = formatDashboardMessage(
@@ -448,6 +470,14 @@ export default function DashboardPage() {
         onSuccess={handleLeadSuccess}
       />
       <Celebration trigger={celebrate} />
+      <AnimatePresence>
+        {showUpdateModal && (
+          <FeatureUpdateModal
+            isOpen={showUpdateModal}
+            onClose={handleCloseUpdateModal}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ messages, total });
   } catch (error) {
+    console.error("messages error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -13,6 +13,7 @@ export async function GET() {
     const user = await User.findById(session.user.id);
     return NextResponse.json({ soundUrl: user?.soundUrl || null });
   } catch (error) {
+    console.error("settings/sound GET error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, soundUrl: dataUrl });
   } catch (error) {
+    console.error("settings/sound POST error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -50,6 +52,7 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("settings/sound DELETE error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

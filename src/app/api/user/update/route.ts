@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
       user.telegramUsername = telegramUsername || null;
     }
 
-    console.log(user.telegramUsername);
 
     // Update password
     if (currentPassword && newPassword) {
