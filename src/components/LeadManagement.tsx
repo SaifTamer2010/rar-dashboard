@@ -11,8 +11,8 @@ import toast from "react-hot-toast";
 
 interface LeadFormProps {
   initialData?: any;
-  users: IUser[];
-  campaigns: ICampaign[];
+  users: any[];
+  campaigns: any[];
   onSubmit: (data: any) => void;
   onCancel: () => void;
   isEdit?: boolean;

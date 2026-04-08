@@ -2,11 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
-import { signOut } from "next-auth/react";
-import Image from "next/image";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAppDispatch } from "@/store/hooks";
 import DashboardNavbar from "@/components/DashboardNavbar";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  User, 
+  Bell, 
+  Shield, 
+  History, 
+  Trash2, 
+  Camera, 
+  Play, 
+  Check, 
+  Upload, 
+  Activity, 
+  Lock 
+} from "lucide-react";
 
 interface Lead {
   _id: string;
@@ -39,12 +50,12 @@ export default function SettingsPage() {
   useEffect(() => {
     if (session?.user) {
       setName(session.user.name);
-      // fetch current telegram username
       fetch("/api/user/me")
         .then((r) => r.json())
         .then((data) => setTelegramUsername(data.telegramUsername || ""));
     }
   }, [session]);
+
   useEffect(() => {
     fetch("/api/leads/history")
       .then((r) => r.json())
@@ -56,7 +67,6 @@ export default function SettingsPage() {
       .then((data) => setSoundUrl(data.soundUrl || null));
   }, []);
 
-  // Profile update
   async function handleProfileSave() {
     setProfileLoading(true);
     setProfileMsg("");
@@ -81,13 +91,12 @@ export default function SettingsPage() {
       return;
     }
 
-    await update({ name }); // update session
+    await update({ name });
     setCurrentPassword("");
     setNewPassword("");
     setProfileMsg("Saved successfully!");
   }
 
-  // Sound upload
   async function handleSoundUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -167,194 +176,225 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-2 md:p-6 pb-32">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 pb-32">
       <DashboardNavbar />
 
-      {/* Profile Section */}
-
-      <div className="w-[90%] md:w-[70%] mx-auto">
-        <section className="bg-gray-900 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-6">Profile</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-              />
+      <div className="max-w-6xl mx-auto space-y-10">
+        <motion.header 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative py-12 px-8 rounded-[3rem] border-2 border-blue-500/10 bg-slate-900/40 backdrop-blur-2xl overflow-hidden"
+        >
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <User className="w-6 h-6 text-white" />
             </div>
-
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">
-                Telegram Username{" "}
-                <span className="text-gray-600">(optional)</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  @
-                </span>
-                <input
-                  type="text"
-                  value={telegramUsername}
-                  onChange={(e) =>
-                    setTelegramUsername(e.target.value.replace("@", ""))
-                  }
-                  placeholder="username"
-                  className="w-full bg-gray-800 text-white pl-8 pr-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Leave blank to keep current"
-                className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Leave blank to keep current"
-                className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {profileMsg && (
-              <p
-                className={`text-sm ${profileMsg.includes("success") ? "text-green-400" : "text-red-400"}`}
-              >
-                {profileMsg}
-              </p>
-            )}
-
-            <button
-              onClick={handleProfileSave}
-              disabled={profileLoading}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-6 py-3 rounded-xl font-medium transition"
-            >
-              {profileLoading ? "Saving..." : "Save Changes"}
-            </button>
+            <h2 className="text-sm font-black text-blue-400 uppercase tracking-[0.5em]">System Prefs</h2>
           </div>
-        </section>
+          <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent italic uppercase tracking-tighter">
+            User <span className="text-blue-500">Settings</span>
+          </h1>
+        </motion.header>
 
-        {/* Sound Section */}
-        <section className="bg-gray-900 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-2">Notification Sound</h2>
-          <p className="text-gray-400 text-sm mb-6">
-            This sound plays for all users when a lead is logged.
-          </p>
-
-          <audio ref={audioRef} />
-
-          {soundUrl ? (
-            <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={handlePreview}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-xl text-sm transition"
-              >
-                ▶ Preview
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-xl text-sm transition"
-              >
-                Replace
-              </button>
-              <button
-                onClick={handleSoundDelete}
-                disabled={soundLoading}
-                className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white px-5 py-2 rounded-xl text-sm transition"
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={soundLoading}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-6 py-3 rounded-xl font-medium transition"
+        <div className="grid lg:grid-cols-12 gap-10">
+          {/* Left: Profile & Sound */}
+          <div className="lg:col-span-8 space-y-10">
+            {/* Profile Section */}
+            <motion.section 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl space-y-8"
             >
-              {soundLoading ? "Uploading..." : "Upload Sound"}
-            </button>
-          )}
+              <div className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-blue-500" />
+                <h2 className="text-2xl font-black italic uppercase italic">Account Profile</h2>
+              </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*"
-            className="hidden"
-            onChange={handleSoundUpload}
-          />
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl px-5 py-4 text-gray-200 outline-none transition-all shadow-inner"
+                  />
+                </div>
 
-          {soundMsg && (
-            <p
-              className={`mt-3 text-sm ${soundMsg.includes("!") ? "text-green-400" : "text-red-400"}`}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1">Telegram Handle</label>
+                  <div className="relative group">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-500 font-bold">@</span>
+                    <input
+                      type="text"
+                      value={telegramUsername}
+                      onChange={(e) => setTelegramUsername(e.target.value.replace("@", ""))}
+                      placeholder="username"
+                      className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-10 pr-5 py-4 text-gray-200 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1">Current Password</label>
+                  <div className="relative">
+                    <Lock className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10" />
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl px-5 py-4 text-gray-200 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1">New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl px-5 py-4 text-gray-200 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {profileMsg && (
+                <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${
+                  profileMsg.includes("successfully") ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-red-500/10 border-red-500/40 text-red-400"
+                }`}>
+                  <Activity className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-xs font-black uppercase tracking-widest">{profileMsg}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleProfileSave}
+                disabled={profileLoading}
+                className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 disabled:opacity-40 text-white px-10 py-5 rounded-[1.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-3"
+              >
+                {profileLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>COMMIT CHANGES <Check className="w-5 h-5" /></>
+                )}
+              </button>
+            </motion.section>
+
+            {/* Sound Section */}
+            <motion.section 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl relative overflow-hidden"
             >
-              {soundMsg}
-            </p>
-          )}
-        </section>
+              <div className="flex items-center gap-3 mb-2">
+                <Bell className="w-6 h-6 text-blue-500" />
+                <h2 className="text-2xl font-black italic uppercase italic">Global Pulse</h2>
+              </div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-8">System-wide notification for every logged lead</p>
 
-        {/* Lead History Section */}
-        <section className="bg-gray-900 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-6">My Lead History</h2>
+              <audio ref={audioRef} />
 
-          {historyLoading ? (
-            <p className="text-gray-500 text-sm">Loading...</p>
-          ) : leads.length === 0 ? (
-            <p className="text-gray-500 text-sm">No leads yet.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400 border-b border-gray-800">
-                  <th className="text-left py-2">Campaign</th>
-                  <th className="text-right py-2">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.map((lead) => (
-                  <tr
-                    key={lead._id}
-                    className="border-b border-gray-800 hover:bg-gray-800 transition"
+              <div className="flex flex-wrap gap-4">
+                {soundUrl ? (
+                  <>
+                    <button
+                      onClick={handlePreview}
+                      className="flex items-center gap-3 px-6 py-4 bg-slate-950/60 border-2 border-blue-500/20 hover:border-blue-500/50 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                    >
+                      <Play className="w-4 h-4 text-blue-400" /> Preview Sound
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-3 px-6 py-4 bg-slate-950/60 border-2 border-white/5 hover:border-blue-500/40 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                    >
+                      <Camera className="w-4 h-4 text-gray-400" /> Replace
+                    </button>
+                    <button
+                      onClick={handleSoundDelete}
+                      disabled={soundLoading}
+                      className="flex items-center gap-3 px-6 py-4 bg-red-600/10 border-2 border-red-500/20 hover:bg-red-600 hover:text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-red-500 disabled:opacity-40"
+                    >
+                      <Trash2 className="w-4 h-4" /> Wipe
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={soundLoading}
+                    className="flex items-center justify-center gap-4 px-10 py-5 bg-blue-600/10 border-2 border-blue-500/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-[1.8rem] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-40 w-full md:w-auto"
                   >
-                    <td className="py-3 flex gap-2">
-                      {lead.campaignId?.name || "Unknown"}
-                      <button
-                        onClick={() => handleDelete(lead._id)}
-                        className="text-red-400 hover:text-red-300 text-sm transition cursor-pointer"
-                      >
-                        <Image
-                          src={Trash}
-                          width={15}
-                          height={15}
-                          alt={"delete"}
-                        />
-                      </button>
-                    </td>
-                    <td className="py-3 text-right text-gray-400">
-                      {new Date(lead.createdAt).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
+                    {soundLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>UPLOAD PULSE <Upload className="w-5 h-5" /></>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={handleSoundUpload}
+              />
+
+              {soundMsg && (
+                <p className={`mt-6 text-[10px] font-black uppercase tracking-[0.2em] ${soundMsg.includes("!") ? "text-emerald-400" : "text-red-400"}`}>
+                  {soundMsg}
+                </p>
+              )}
+            </motion.section>
+          </div>
+
+          {/* Right Column: Lead History */}
+          <div className="lg:col-span-4">
+            <motion.section 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl h-full relative overflow-hidden"
+            >
+              <div className="flex items-center gap-3 mb-8">
+                <History className="w-6 h-6 text-blue-500" />
+                <h2 className="text-2xl font-black italic uppercase italic">History</h2>
+              </div>
+
+              <div className="space-y-4 max-h-[1000px] overflow-y-auto pr-2 custom-scrollbar">
+                {historyLoading ? (
+                  <div className="p-10 text-center animate-pulse text-blue-400/40 text-xs font-black uppercase">Scanning Nodes...</div>
+                ) : leads.length === 0 ? (
+                  <div className="p-10 text-center text-gray-500 text-xs font-black uppercase">No Data Found</div>
+                ) : (
+                  leads.map((lead) => (
+                    <motion.div
+                      key={lead._id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-slate-950/40 border-2 border-white/5 hover:border-blue-500/20 rounded-2xl p-4 transition-all group"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm font-black text-white uppercase italic">{lead.campaignId?.name || "Unknown"}</span>
+                        <button
+                          onClick={() => handleDelete(lead._id)}
+                          className="p-1.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest leading-none">
+                        {new Date(lead.createdAt).toLocaleString()}
+                      </p>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            </motion.section>
+          </div>
+        </div>
       </div>
     </div>
   );

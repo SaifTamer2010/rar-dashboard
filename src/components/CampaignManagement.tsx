@@ -74,7 +74,7 @@ const CampaignManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const { list: campaigns, status, error } = useAppSelector((state) => state.campaigns);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<ICampaign | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
 
   useEffect(() => {
     if (status === "idle") {

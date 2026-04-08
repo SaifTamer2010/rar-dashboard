@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +9,7 @@ import CampaignManagement from "@/components/CampaignManagement";
 import LeadManagement from "@/components/LeadManagement";
 import DashboardNavbar from "@/components/DashboardNavbar";
 
-const AdminPage = () => {
+const AdminPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -35,19 +35,12 @@ const AdminPage = () => {
   ];
 
   if (status === "loading") {
-    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">Verifying...</div>;
+    return <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">Verifying...</div>;
   }
 
   if (session?.user?.role !== "admin") {
     return null;
   }
-
-  // const tabs = [
-  //   { id: "users", label: "Users" },
-  //   { id: "campaigns", label: "Campaigns" },
-  //   { id: "leads", label: "Leads" },
-  // ];
-
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -55,32 +48,34 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-2 md:p-6 pb-32">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 pb-32 selection:bg-blue-500/30">
       <DashboardNavbar />
 
-      <div className="mb-8 border-b border-gray-700">
-        <ul className="flex flex-wrap -mb-px text-sm font-medium text-center relative" role="tablist">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+        <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent italic uppercase tracking-tighter">
+          Admin <span className="text-blue-500">Control</span>
+        </h1>
+        
+        <div className="flex bg-slate-900/40 backdrop-blur-2xl p-1.5 rounded-[1.5rem] border-2 border-blue-500/10 shadow-xl ring-1 ring-blue-500/5">
           {tabs.map((tab) => (
-            <li key={tab.id} className="me-2 relative" role="presentation">
-              <button
-                className={`inline-block p-4 border-b-2 transition-colors relative z-10 ${activeTab === tab.id ? "text-blue-500" : "text-gray-400 hover:text-gray-300"
-                  } ${activeTab === tab.id ? "border-transparent" : "border-transparent"}`}
-                onClick={() => handleTabChange(tab.id)}
-                type="button"
-                role="tab"
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                )}
-              </button>
-            </li>
+            <button
+              key={tab.id}
+              className={`relative px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all z-10 ${
+                activeTab === tab.id ? "text-white" : "text-gray-500 hover:text-gray-300"
+              }`}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTabBadge"
+                  className="absolute inset-0 bg-blue-600 rounded-2xl -z-10 shadow-lg shadow-blue-500/20"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+            </button>
           ))}
-        </ul>
+        </div>
       </div>
 
       <div className="relative overflow-visible">
@@ -102,4 +97,10 @@ const AdminPage = () => {
   );
 };
 
-export default AdminPage;
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#020617] flex items-center justify-center text-white font-black uppercase tracking-widest">Waking Up Admin...</div>}>
+      <AdminPageContent />
+    </Suspense>
+  );
+}
