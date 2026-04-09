@@ -68,13 +68,13 @@ const UserForm: React.FC<UserFormProps> = ({
   onCancel,
   isEdit = false,
 }) => {
-  const [name, setName] = useState(initialData.name || "");
+  const [name, setName] = useState(initialData?.name || "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>((initialData.role as Role) || "user");
+  const [role, setRole] = useState<Role>((initialData?.role as Role) || "user");
   const [telegramUsername, setTelegramUsername] = useState(
-    initialData.telegramUsername || ""
+    initialData?.telegramUsername || ""
   );
-  const [soundUrl, setSoundUrl] = useState(initialData.soundUrl || "");
+  const [soundUrl, setSoundUrl] = useState(initialData?.soundUrl || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,10 +207,8 @@ const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<any | null>(null);
 
   useEffect(() => {
-    if (status === "idle") {
-      dispatch(fetchUsers());
-    }
-  }, [status, dispatch]);
+    dispatch(fetchUsers());
+  }, [dispatch]);
 
   const handleAddUser = async (userData: any) => {
     const promise = dispatch(addUser(userData)).unwrap();

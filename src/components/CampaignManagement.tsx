@@ -30,7 +30,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
   onCancel,
   isEdit = false,
 }) => {
-  const [name, setName] = useState(initialData.name || "");
+  const [name, setName] = useState(initialData?.name || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +98,8 @@ const CampaignManagement: React.FC = () => {
   const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
 
   useEffect(() => {
-    if (status === "idle") {
-      dispatch(fetchCampaigns());
-    }
-  }, [status, dispatch]);
+    dispatch(fetchCampaigns());
+  }, [dispatch]);
 
   const handleAddCampaign = async (campaignData: any) => {
     const promise = dispatch(addCampaign(campaignData)).unwrap();

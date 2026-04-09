@@ -19,6 +19,11 @@ interface LeadsState {
   lastLead: LastLead | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  pagination: {
+    total: number;
+    page: number;
+    totalPages: number;
+  };
 }
 
 const initialState: LeadsState = {
@@ -29,6 +34,11 @@ const initialState: LeadsState = {
   lastLead: null,
   status: "idle",
   error: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    totalPages: 1,
+  },
 };
 
 export const fetchLeadsStats = createAsyncThunk(
@@ -56,11 +66,11 @@ export const fetchLeadsStats = createAsyncThunk(
 
 export const fetchLeads = createAsyncThunk(
   "leads/fetchLeads",
-  async () => {
-    const res = await fetch("/api/admin/leads");
+  async (page: number = 1) => {
+    const res = await fetch(`/api/admin/leads?page=${page}&limit=50`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to fetch leads");
-    return data.leads || [];
+    return data; // Returns { leads, total, page, totalPages }
   }
 );
 
@@ -139,7 +149,12 @@ const leadsSlice = createSlice({
       })
       // Leads List
       .addCase(fetchLeads.fulfilled, (state, action) => {
-        state.list = action.payload;
+        state.list = action.payload.leads;
+        state.pagination = {
+          total: action.payload.total,
+          page: action.payload.page,
+          totalPages: action.payload.totalPages,
+        };
       })
       .addCase(addLead.fulfilled, (state, action) => {
         state.list.push(action.payload);

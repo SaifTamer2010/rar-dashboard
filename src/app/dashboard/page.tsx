@@ -141,7 +141,7 @@ export default function DashboardPage() {
       setTimeout(() => setShameActive(false), 10000);
 
       const utterance = new SpeechSynthesisUtterance(
-        `That's a shame. No leads for ${payload.minutesSinceLastLead} minutes. Last Lead was by ${lastLead?.userId.name}. Get back to work nigga.`,
+        `That's a shame. No leads for ${payload.minutesSinceLastLead} minutes. Last Lead was by ${lastLead?.userId?.name || "someone"}. Get back to work nigga.`,
       );
 
       const voices = window.speechSynthesis.getVoices();

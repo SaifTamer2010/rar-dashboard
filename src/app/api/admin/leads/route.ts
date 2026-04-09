@@ -13,14 +13,29 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    await connectToDatabase();
-    // Populate user and campaign details
-    const leads = await Lead.find()
-      .populate("userId", "name")
-      .populate("campaignId", "name")
-      .sort({ createdAt: -1 });
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ leads });
+    await connectToDatabase();
+    
+    const [leads, total] = await Promise.all([
+      Lead.find()
+        .populate("userId", "name")
+        .populate("campaignId", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Lead.countDocuments()
+    ]);
+
+    return NextResponse.json({ 
+      leads, 
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (error) {
     console.error("Error fetching leads:", error);
     return NextResponse.json(

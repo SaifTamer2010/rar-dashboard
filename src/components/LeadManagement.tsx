@@ -18,7 +18,9 @@ import {
   Database,
   History,
   TrendingUp,
-  Activity
+  Activity,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface LeadFormProps {
@@ -38,10 +40,10 @@ const LeadForm: React.FC<LeadFormProps> = ({
   onCancel,
   isEdit = false,
 }) => {
-  const [userId, setUserId] = useState(initialData.userId?._id || initialData.userId || "");
-  const [campaignId, setCampaignId] = useState(initialData.campaignId?._id || initialData.campaignId || "");
+  const [userId, setUserId] = useState(initialData?.userId?._id || initialData?.userId || "");
+  const [campaignId, setCampaignId] = useState(initialData?.campaignId?._id || initialData?.campaignId || "");
   const [createdAt, setCreatedAt] = useState(
-    initialData.createdAt ? new Date(initialData.createdAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
+    initialData?.createdAt ? new Date(initialData.createdAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,7 +150,7 @@ const LeadForm: React.FC<LeadFormProps> = ({
 
 const LeadManagement: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { list: leads, status, error } = useAppSelector((state) => state.leads);
+  const { list: leads, status, error, pagination } = useAppSelector((state) => state.leads);
   const { list: users } = useAppSelector((state) => state.users);
   const { list: campaigns } = useAppSelector((state) => state.campaigns);
   
@@ -156,12 +158,14 @@ const LeadManagement: React.FC = () => {
   const [editingLead, setEditingLead] = useState<any | null>(null);
 
   useEffect(() => {
-    if (status === "idle") {
-      dispatch(fetchLeads());
-    }
+    dispatch(fetchLeads(pagination.page));
     dispatch(fetchUsers());
     dispatch(fetchCampaigns());
-  }, [status, dispatch]);
+  }, [dispatch, pagination.page]);
+
+  const handlePageChange = (newPage: number) => {
+    dispatch(fetchLeads(newPage));
+  };
 
   const handleAddLead = async (leadData: any) => {
     const promise = dispatch(addLead(leadData)).unwrap();
@@ -249,7 +253,7 @@ const LeadManagement: React.FC = () => {
                   setShowAddForm(false);
                   setEditingLead(null);
                 }} 
-                initialData={editingLead}
+                initialData={editingLead || {}}
                 isEdit={!!editingLead}
               />
             </div>
@@ -313,6 +317,31 @@ const LeadManagement: React.FC = () => {
               </div>
             </motion.div>
           ))}
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between px-8 py-6 bg-slate-950/40 border-t-2 border-blue-500/10">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">
+            Showing Page <span className="text-blue-400">{pagination.page}</span> of <span className="text-blue-400">{pagination.totalPages}</span>
+            <span className="ml-4 text-gray-700">({pagination.total} Total Segments)</span>
+          </p>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page <= 1 || status === "loading"}
+              className="p-2 rounded-xl border-2 border-white/5 bg-slate-800/40 text-gray-400 hover:bg-blue-600/10 hover:border-blue-500/20 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages || status === "loading"}
+              className="p-2 rounded-xl border-2 border-white/5 bg-slate-800/40 text-gray-400 hover:bg-blue-600/10 hover:border-blue-500/20 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

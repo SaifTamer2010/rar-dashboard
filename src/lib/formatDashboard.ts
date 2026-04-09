@@ -53,7 +53,7 @@ Total Leads ${totalLine}
 ————————————————
 ${campaignLines}
 ————————————————
-Last Lead: ${lastLead?.userId.name} on ${lastLead?.campaignId.name} at ${lastLead?.createdAt ? new Date(lastLead.createdAt).toLocaleTimeString() : ""}
+Last Lead: ${lastLead?.userId?.name || "None"} on ${lastLead?.campaignId?.name || "None"} at ${lastLead?.createdAt ? new Date(lastLead.createdAt).toLocaleTimeString() : ""}
 ==============================
 Sent By: ${sentBy}`;
 }
