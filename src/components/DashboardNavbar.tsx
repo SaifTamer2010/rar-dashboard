@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   LogOut,
   ChevronDown,
-  RefreshCcw
+  RefreshCcw,
+  Music2
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -43,6 +44,7 @@ const DashboardNavbar = () => {
     if (pathname === "/dashboard") return ""; // Dashboard is the home, no breadcrumb needed typically or just empty
     if (pathname === "/leaderboard") return "Leaderboard";
     if (pathname === "/settings") return "Settings";
+    if (pathname === "/admin/sounds") return "Sound Store";
     if (pathname.startsWith("/admin")) return "Admin Panel";
     return "";
   };
@@ -59,6 +61,7 @@ const DashboardNavbar = () => {
 
   if (isAdmin) {
     menuItems.push({ label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> });
+    menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
   }
 
   return (

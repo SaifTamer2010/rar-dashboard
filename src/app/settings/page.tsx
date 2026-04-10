@@ -16,8 +16,19 @@ import {
   Check,
   Upload,
   Activity,
-  Lock
+  Lock,
+  Music2,
+  ListMusic,
+  Zap,
+  Star
 } from "lucide-react";
+
+interface GlobalSound {
+  _id: string;
+  name: string;
+  base64: string;
+  mimeType: string;
+}
 
 interface Lead {
   _id: string;
@@ -44,12 +55,15 @@ export default function SettingsPage() {
   const [soundUrl, setSoundUrl] = useState<string | null>(null);
   const [soundLoading, setSoundLoading] = useState(false);
   const [soundMsg, setSoundMsg] = useState("");
+  const [globalSounds, setGlobalSounds] = useState<GlobalSound[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
   
   // Bot Template
   const [leadMessageTemplate, setLeadMessageTemplate] = useState("");
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateMsg, setTemplateMsg] = useState("");
   const [showTestModal, setShowTestModal] = useState(false);
+  const [shouldShake, setShouldShake] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +90,22 @@ export default function SettingsPage() {
     fetch("/api/settings/config")
       .then((r) => r.json())
       .then((data) => setLeadMessageTemplate(data.leadMessageTemplate || ""));
+
+    fetchGlobalSounds();
   }, []);
+
+  async function fetchGlobalSounds() {
+    setLibraryLoading(true);
+    try {
+      const res = await fetch("/api/sounds?me=true");
+      const data = await res.json();
+      setGlobalSounds(data.sounds || []);
+    } catch (err) {
+      console.error("Failed to fetch sounds:", err);
+    } finally {
+      setLibraryLoading(false);
+    }
+  }
 
   async function handleProfileSave() {
     setProfileLoading(true);
@@ -131,9 +160,18 @@ export default function SettingsPage() {
       const result = reader.result as string;
       const base64 = result.split(",")[1];
 
+      // Normalize mimeType for better browser support
+      const normalizedMimeType = file.type === "audio/mp3" ? "audio/mpeg" : file.type;
+
+      const body = { 
+        base64, 
+        mimeType: normalizedMimeType,
+        name: file.name.split('.')[0] || "Custom Sound"
+      };
+
       const res = await fetch("/api/settings/sound", {
         method: "POST",
-        body: JSON.stringify({ base64, mimeType: file.type }),
+        body: JSON.stringify(body),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -142,11 +180,16 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         setSoundMsg(data.error || "Upload failed");
+        if (data.error?.includes("Duplicate")) {
+          setShouldShake(true);
+          setTimeout(() => setShouldShake(false), 500);
+        }
         return;
       }
 
       setSoundUrl(data.soundUrl);
       setSoundMsg("Sound uploaded!");
+      fetchGlobalSounds(); // Refresh the library
     };
 
     reader.readAsDataURL(file);
@@ -171,11 +214,49 @@ export default function SettingsPage() {
     setSoundLoading(false);
   }
 
-  function handlePreview() {
-    if (!soundUrl) return;
+  function handlePreview(customUrl?: string) {
+    const url = customUrl || soundUrl;
+    if (!url) return;
     if (audioRef.current) {
-      audioRef.current.src = soundUrl;
-      audioRef.current.play();
+      // Ensure the URL is valid
+      audioRef.current.src = url;
+      audioRef.current.load();
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Playback failed:", error);
+          setSoundMsg("Preview failed: Unsupported format.");
+        });
+      }
+    }
+  }
+
+  async function handleApplyGlobalSound(sound: GlobalSound) {
+    setSoundLoading(true);
+    setSoundMsg("");
+    
+    try {
+      const dataUrl = `data:${sound.mimeType};base64,${sound.base64}`;
+      const res = await fetch("/api/settings/sound", {
+        method: "POST",
+        body: JSON.stringify({ 
+          base64: sound.base64, 
+          mimeType: sound.mimeType,
+          name: sound.name 
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        setSoundUrl(dataUrl);
+        setSoundMsg(`Applied "${sound.name}"!`);
+      } else {
+        setSoundMsg("Failed to apply sound");
+      }
+    } catch (err) {
+      setSoundMsg("Error applying sound");
+    } finally {
+      setSoundLoading(false);
     }
   }
 
@@ -348,23 +429,32 @@ export default function SettingsPage() {
               </div>
               <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-8">System-wide notification for every logged lead</p>
 
-              <audio ref={audioRef} />
+              <audio 
+                ref={audioRef} 
+                onLoadedData={() => console.log("Settings audio loaded")}
+                onError={(e) => {
+                  const target = e.target as HTMLAudioElement;
+                  console.error("Settings Audio Error:", target.error);
+                }}
+              />
 
               <div className="flex flex-wrap gap-4">
                 {soundUrl ? (
                   <>
                     <button
-                      onClick={handlePreview}
+                      onClick={() => handlePreview()}
                       className="flex items-center gap-3 px-6 py-4 bg-slate-950/60 border-2 border-blue-500/20 hover:border-blue-500/50 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
                     >
                       <Play className="w-4 h-4 text-blue-400" /> Preview Sound
                     </button>
-                    <button
+                    <motion.button
+                      animate={shouldShake ? { x: [-10, 10, -10, 10, 0] } : {}}
+                      transition={{ duration: 0.4 }}
                       onClick={() => fileInputRef.current?.click()}
                       className="flex items-center gap-3 px-6 py-4 bg-slate-950/60 border-2 border-white/5 hover:border-blue-500/40 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
                     >
                       <Camera className="w-4 h-4 text-gray-400" /> Replace
-                    </button>
+                    </motion.button>
                     <button
                       onClick={handleSoundDelete}
                       disabled={soundLoading}
@@ -374,7 +464,9 @@ export default function SettingsPage() {
                     </button>
                   </>
                 ) : (
-                  <button
+                  <motion.button
+                    animate={shouldShake ? { x: [-10, 10, -10, 10, 0] } : {}}
+                    transition={{ duration: 0.4 }}
                     onClick={() => fileInputRef.current?.click()}
                     disabled={soundLoading}
                     className="flex items-center justify-center gap-4 px-10 py-5 bg-blue-600/10 border-2 border-blue-500/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-[1.8rem] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-40 w-full md:w-auto"
@@ -384,7 +476,7 @@ export default function SettingsPage() {
                     ) : (
                       <>UPLOAD SOUND <Upload className="w-5 h-5" /></>
                     )}
-                  </button>
+                  </motion.button>
                 )}
               </div>
 
@@ -401,6 +493,79 @@ export default function SettingsPage() {
                   {soundMsg}
                 </p>
               )}
+            </motion.section>
+
+            {/* Latest Presets Section */}
+            <motion.section
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-slate-900/40 backdrop-blur-2xl rounded-[3rem] border-2 border-blue-500/10 p-8 shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-6 h-6 text-amber-500 animate-pulse" />
+                  <h2 className="text-2xl font-black italic uppercase italic">Latest Presets</h2>
+                </div>
+                {globalSounds.length > 0 && (
+                  <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                      Your History
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {libraryLoading ? (
+                  <div className="col-span-full py-10 text-center animate-pulse text-amber-400/40 text-xs font-black uppercase">
+                    Syncing Archive...
+                  </div>
+                ) : globalSounds.length === 0 ? (
+                  <div className="col-span-full py-10 text-center text-gray-500 text-xs font-black uppercase">
+                    No Personal Presets
+                  </div>
+                ) : (
+                  globalSounds
+                    .filter(sound => `data:${sound.mimeType};base64,${sound.base64}` !== soundUrl)
+                    .slice(0, 2)
+                    .map((sound) => (
+                    <div
+                      key={sound._id}
+                      className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border-2 border-white/5 hover:border-amber-500/40 rounded-[2rem] p-6 flex items-center justify-between group transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                          <Music2 className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black text-gray-200 uppercase tracking-wider truncate max-w-[120px]">
+                            {sound.name}
+                          </p>
+                          <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">
+                            {sound.mimeType.split('/')[1]?.toUpperCase() || "AUDIO"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePreview(`data:${sound.mimeType};base64,${sound.base64}`)}
+                          className="p-2.5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Play className="w-5 h-5 fill-current" />
+                        </button>
+                        <button
+                          onClick={() => handleApplyGlobalSound(sound)}
+                          disabled={soundLoading}
+                          className="px-4 py-2 bg-amber-600/10 hover:bg-amber-600 text-amber-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                        >
+                          <Star className="w-4 h-4 fill-current" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </motion.section>
 
             {/* Bot Template Section */}
