@@ -11,11 +11,15 @@ interface FeatureUpdateModalProps {
 export default function FeatureUpdateModal({ isOpen, onClose }: FeatureUpdateModalProps) {
   const features = [
     {
-      title: "Personal War Cries",
-      description: "Now you can customize your own unique Telegram notification message in Settings use it wisely 😉.",
+      title: "Global Sound Store",
+      description: "Not up yet but upload more sounds for now😉",
       icon: <Sparkles className="w-5 h-5 text-blue-400" />,
     },
-
+    {
+      title: "Personal Presets",
+      description: "Quickly swap between your last 2 uploaded sounds directly from your settings.",
+      icon: <Check className="w-5 h-5 text-emerald-400" />,
+    },
   ];
 
   return (
@@ -35,16 +39,16 @@ export default function FeatureUpdateModal({ isOpen, onClose }: FeatureUpdateMod
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ 
-              opacity: 0, 
-              scale: 0.95, 
+            exit={{
+              opacity: 0,
+              scale: 0.95,
               y: 40,
               rotateX: -10,
-              transition: { 
+              transition: {
                 type: "spring",
                 stiffness: 300,
-                damping: 30 
-              } 
+                damping: 30
+              }
             }}
             className="relative w-full max-w-xl bg-slate-900 border-2 border-blue-500/20 rounded-[3.5rem] p-10 shadow-[0_0_50px_rgba(59,130,246,0.15)] overflow-hidden"
           >
@@ -65,10 +69,10 @@ export default function FeatureUpdateModal({ isOpen, onClose }: FeatureUpdateMod
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">System Upgrade</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white">
-                v1.0.0 <span className="text-blue-500">Deployed</span>
+                v1.1.0 <span className="text-blue-500">LIVE</span>
               </h2>
               <p className="text-gray-400 font-medium leading-relaxed">
-                The tribe has evolved. New tools have been forged for the hunt.
+                The dashboard has evolved.
               </p>
             </div>
 
