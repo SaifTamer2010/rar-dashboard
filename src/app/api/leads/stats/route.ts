@@ -37,65 +37,66 @@ export async function GET(req: NextRequest) {
       dateMatch = { createdAt: { $gte: start } };
     }
 
-    const byUser = await User.aggregate([
-      { $match: { role: { $in: ["user", "admin"] } } },
-      {
-        $lookup: {
-          from: "leads",
-          let: { userId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ["$userId", "$$userId"] },
-                ...dateMatch,
+    const [byUser, byCampaign, totalLeads, lastLead] = await Promise.all([
+      User.aggregate([
+        { $match: { role: { $in: ["user", "admin"] } } },
+        {
+          $lookup: {
+            from: "leads",
+            let: { userId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$userId", "$$userId"] },
+                  ...dateMatch,
+                },
               },
-            },
-          ],
-          as: "leads",
+              { $count: "count" },
+            ],
+            as: "leadsCount",
+          },
         },
-      },
-      {
-        $project: {
-          _id: 0,
-          name: 1,
-          count: { $size: "$leads" },
+        {
+          $project: {
+            _id: 0,
+            name: 1,
+            count: { $ifNull: [{ $arrayElemAt: ["$leadsCount.count", 0] }, 0] },
+          },
         },
-      },
-      { $sort: { count: -1 } },
-    ]);
-
-    const byCampaign = await Campaign.aggregate([
-      {
-        $lookup: {
-          from: "leads",
-          let: { campaignId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ["$campaignId", "$$campaignId"] },
-                ...dateMatch,
+        { $sort: { count: -1 } },
+      ]),
+      Campaign.aggregate([
+        {
+          $lookup: {
+            from: "leads",
+            let: { campaignId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$campaignId", "$$campaignId"] },
+                  ...dateMatch,
+                },
               },
-            },
-          ],
-          as: "leads",
+              { $count: "count" },
+            ],
+            as: "leadsCount",
+          },
         },
-      },
-      {
-        $project: {
-          _id: 0,
-          name: 1,
-          count: { $size: "$leads" },
+        {
+          $project: {
+            _id: 0,
+            name: 1,
+            count: { $ifNull: [{ $arrayElemAt: ["$leadsCount.count", 0] }, 0] },
+          },
         },
-      },
-      { $sort: { count: -1 } },
+        { $sort: { count: -1 } },
+      ]),
+      Lead.countDocuments(dateMatch),
+      Lead.findOne()
+        .sort({ createdAt: -1 })
+        .populate("userId", "name")
+        .populate("campaignId", "name")
     ]);
-
-    const totalLeads = await Lead.countDocuments(dateMatch);
-
-    const lastLead = await Lead.findOne()
-      .sort({ createdAt: -1 })
-      .populate("userId", "name")
-      .populate("campaignId", "name");
 
     return NextResponse.json({ byUser, byCampaign, totalLeads, lastLead });
   } catch (error) {

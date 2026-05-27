@@ -301,7 +301,7 @@ export default function DashboardPage() {
                           <div>
                             <p className={`text-lg font-bold flex items-center gap-2 ${isTop ? "text-white" : "text-gray-200"}`}>
                               {row.name}
-                              {isTop && <Flame className="w-5 h-5 text-orange-400 animate-pulse" />}
+                              {isTop && <Flame className="w-5 h-5 text-orange-400 hover:animate-pulse" />}
                               {isSecond && <Trophy className="w-4 h-4 text-slate-300" />}
                               {isThird && <Trophy className="w-4 h-4 text-amber-600" />}
                             </p>
@@ -320,11 +320,12 @@ export default function DashboardPage() {
                 </AnimatePresence>
 
                 {loading && byUser.length === 0 && (
-                  <div className="space-y-4 animate-pulse">
+                  <div className="space-y-4 hover:animate-pulse">
                     {[1, 2, 3].map(i => (
                       <div key={i} className="h-20 bg-white/5 rounded-3xl" />
                     ))}
                   </div>
+                 
                 )}
               </div>
             </motion.section>
@@ -337,7 +338,7 @@ export default function DashboardPage() {
                 className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[2.5rem] shadow-2xl shadow-blue-600/20"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center animate-pulse">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center hover:animate-pulse">
                     <Activity className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -433,7 +434,7 @@ export default function DashboardPage() {
             className="group relative pointer-events-auto"
           >
             {/* Outer Glow */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-40 group-hover:opacity-100 transition duration-500 animate-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-40 group-hover:opacity-100 transition duration-500 hover:~~~animate-pulse" />
 
             <div className="relative flex items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white px-12 py-5 rounded-3xl shadow-2xl transition-all border-2 border-white/20">
               <PlusCircle className="w-6 h-6 animate-spin-slow" />
