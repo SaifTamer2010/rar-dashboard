@@ -26,8 +26,7 @@ export default function AdminSoundsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 pb-32">
-      <DashboardNavbar />
+    
 
       <div className="max-w-6xl mx-auto space-y-10">
         <motion.header
@@ -54,6 +53,6 @@ export default function AdminSoundsPage() {
           <SoundStoreManager />
         </motion.div>
       </div>
-    </div>
+   
   );
 }

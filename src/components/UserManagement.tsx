@@ -71,6 +71,7 @@ const UserForm: React.FC<UserFormProps> = ({
   const [name, setName] = useState(initialData?.name || "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>((initialData?.role as Role) || "user");
+  const [isActive, setActive] = useState(initialData?.isActive ?? true);
   const [telegramUsername, setTelegramUsername] = useState(
     initialData?.telegramUsername || ""
   );
@@ -82,6 +83,7 @@ const UserForm: React.FC<UserFormProps> = ({
       name,
       password: password || undefined,
       role,
+      isActive: isActive,
       telegramUsername: telegramUsername || undefined,
       soundUrl: soundUrl || undefined,
     });
@@ -147,6 +149,22 @@ const UserForm: React.FC<UserFormProps> = ({
                 <option value="user">USER</option>
                 <option value="admin">ADMIN</option>
                 <option value="viewer">VIEWER</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] ml-1 text-left block">Permissions Level</label>
+            <div className="relative">
+              <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+              <select
+                className="w-full bg-slate-950/60 border-2 border-white/5 focus:border-blue-500/50 rounded-2xl pl-12 pr-4 py-4 text-gray-200 outline-none transition-all appearance-none"
+                value={isActive ? "true" : "false"}
+                onChange={(e) => setActive(e.target.value === "true")}
+              >
+              
+                <option value="true">ACTIVE</option>
+                <option value="false">INACTIVE</option>
               </select>
             </div>
           </div>
@@ -307,22 +325,23 @@ const UserManagement: React.FC = () => {
       </AnimatePresence>
 
       <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border-2 border-blue-500/10 overflow-hidden shadow-2xl">
-        <div className="grid grid-cols-5 font-black text-blue-400 text-[10px] uppercase tracking-[0.4em] bg-slate-950/40 px-8 py-6 border-b-2 border-blue-500/10 text-left">
+        <div className="grid grid-cols-6 font-black text-blue-400 text-[10px] uppercase tracking-[0.4em] bg-slate-950/40 px-8 py-6 border-b-2 border-blue-500/10 text-left">
           <div className="flex items-center gap-2 px-4"><UserIcon className="w-3 h-3" /> Identity</div>
-          <div className="flex items-center gap-2 px-4"><Shield className="w-3 h-3" /> clearance</div>
-          <div className="flex items-center gap-2 px-4">comms</div>
-          <div className="flex items-center gap-2 px-4">Pulse</div>
+          <div className="flex items-center gap-2 px-4"><Shield className="w-3 h-3" /> Role</div>
+          <div className="flex items-center gap-2 px-4">Telegram</div>
+          <div className="flex items-center gap-2 px-4">Status</div>
+          <div className="flex items-center gap-2 px-4">Sound</div>
           <div className="text-right px-4">Actions</div>
         </div>
 
-        <div className="divide-y-2 divide-blue-500/5 max-h-[800px] overflow-y-auto custom-scrollbar">
+        <div className="divide-y-2 divide-blue-500/5 max-h-[550px] overflow-y-auto custom-scrollbar">
           {users.map((user) => (
             <motion.div
               layout
               key={user._id.toString()}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="grid grid-cols-5 items-center px-8 py-6 hover:bg-white/5 transition-all group text-left"
+              className="grid grid-cols-6 items-center px-8 py-6 hover:bg-white/5 transition-all group text-left"
             >
               <div className="px-4">
                 <p className="text-lg font-black italic uppercase text-gray-100">{user.name}</p>
@@ -339,6 +358,11 @@ const UserManagement: React.FC = () => {
               <div className="px-4">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                   {user.telegramUsername ? `@${user.telegramUsername}` : "OFFLINE"}
+                </p>
+              </div>
+              <div className="px-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  {user.isActive ? "ACTIVE" : "INACTIVE"}
                 </p>
               </div>
               <div className="px-4">

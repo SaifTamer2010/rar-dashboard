@@ -269,7 +269,7 @@ const LeadManagement: React.FC = () => {
           <div className="text-right px-4">Actions</div>
         </div>
 
-        <div className="divide-y-2 divide-blue-500/5 max-h-[800px] overflow-y-auto custom-scrollbar">
+        <div className="divide-y-2 divide-blue-500/5 max-h-[480px] overflow-y-auto custom-scrollbar">
           {leads.map((lead) => (
             <motion.div
               layout

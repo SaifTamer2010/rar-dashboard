@@ -1,46 +1,30 @@
+'use client';
 import type { Metadata } from "next";
 import { Providers } from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/next";
+import DashboardNavbar from "@/components/DashboardNavbar";
+import { usePathname } from "next/navigation";
 
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Ring and Rise | Daily Dashboard",
-  description:
-    "The scoreboard your eldawly didn't know he needed. Real-time leads, live sounds, and zero excuses ostor ydawly.",
-  openGraph: {
-    title: "Daily Dashboard",
-    description: "Real-time sales leads tracker for high-performance teams.",
-    url: "https://rar-dashboard-six.vercel.app/sign-in",
-    siteName: "Daily Dashboard",
-    images: [
-      {
-        url: "https://rar-dashboard-six.vercel.app/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Daily Dashboard",
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Daily Dashboard",
-    description: "Real-time sales leads tracker for high-performance teams.",
-    images: ["https://rar-dashboard-six.vercel.app/opengraph-image"],
-  },
-};
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
   return (
     <html lang="en">
       <body className="antialiased" suppressHydrationWarning>
         <Analytics />
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="max-h-screen grid grid-rows-[auto_1fr]">
+            {pathname === '/sign-in' ? null : <DashboardNavbar />}
+            {children}
+          </div>
+          </Providers>
       </body>
     </html>
   );

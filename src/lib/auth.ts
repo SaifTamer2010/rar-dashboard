@@ -42,6 +42,9 @@ export const authOptions = {
 
         if (!user) return null;
 
+        // Prevent inactive users from logging in
+        if (user.isActive === false) return null;
+
         // No password means account exists but never set one
         if (!user.password) return null;
 

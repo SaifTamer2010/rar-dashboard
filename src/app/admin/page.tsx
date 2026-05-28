@@ -48,8 +48,8 @@ const AdminPageContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 pb-32 selection:bg-blue-500/30">
-      <DashboardNavbar />
+    <div className=" text-white p-4 md:p-8 pb-32 selection:bg-blue-500/30">
+     
 
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
         <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent italic uppercase tracking-tighter">

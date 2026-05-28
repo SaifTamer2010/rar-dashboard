@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
 import { pusherClient } from "@/lib/pusher-client";
-import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { formatDashboardMessage } from "@/lib/formatDashboard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -17,25 +15,22 @@ import FeatureUpdateModal from "@/components/FeatureUpdateModal";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
-  const { byUser, byCampaign, totalLeads: byTotal, lastLead, status } = useAppSelector((state) => state.leads);
+  const byUser = useAppSelector((state) => state.leads.byUser);
+  const byCampaign = useAppSelector((state) => state.leads.byCampaign);
+  const byTotal = useAppSelector((state) => state.leads.totalLeads);
+  const lastLead = useAppSelector((state) => state.leads.lastLead);
+  const status = useAppSelector((state) => state.leads.status);
+  
   const loading = status === "loading";
 
   const [modalOpen, setModalOpen] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const soundCacheRef = useRef<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const [shameActive, setShameActive] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-
-  function enableSound() {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-    }
-    audioContextRef.current.resume();
-    setSoundEnabled(true);
-  }
 
   const { data: session } = useSession();
   const isViewer = session?.user?.role === "viewer";
@@ -122,16 +117,21 @@ export default function DashboardPage() {
           fetchStats();
         }
 
-        const res = await fetch(`/api/sounds/${payload.userId}`);
-        const data = await res.json();
+        let soundUrl = soundCacheRef.current[payload.userId];
+
+        if (!soundUrl) {
+          const res = await fetch(`/api/sounds/${payload.userId}`);
+          const data = await res.json();
+          if (data.soundUrl) {
+            soundUrl = data.soundUrl;
+            soundCacheRef.current[payload.userId] = soundUrl;
+          }
+        }
 
 
-        if (data.soundUrl) {
-
-          const audio = new Audio(data.soundUrl);
+        if (soundUrl) {
+          const audio = new Audio(soundUrl);
           await audio.play().catch(() => {});
-        } else {
-
         }
       },
     );
@@ -156,7 +156,7 @@ export default function DashboardPage() {
       utterance.volume = 1;
 
       utterance.onend = () => {
-        const audio = new Audio("/whip-soundeffect.mp4");
+        const audio = new Audio("/whip-soundeffect.mp3");
         audio.play().catch(() => { });
       };
 
@@ -194,8 +194,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 pb-32">
-      <DashboardNavbar />
+    <div className="">
+      
 
       <div className="max-w-7xl mx-auto space-y-8">
 

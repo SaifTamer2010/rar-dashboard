@@ -201,7 +201,7 @@ const CampaignManagement: React.FC = () => {
           <div className="text-right px-4">Actions</div>
         </div>
 
-        <div className="divide-y-2 divide-blue-500/5 max-h-[800px] overflow-y-auto custom-scrollbar">
+        <div className="divide-y-2 divide-blue-500/5 max-h-[550px] overflow-y-auto custom-scrollbar">
           {campaigns.map((campaign) => (
             <motion.div
               layout

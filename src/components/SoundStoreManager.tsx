@@ -10,7 +10,9 @@ import {
   Activity,
   Check,
   Star,
-  Zap
+  Zap,
+  Download,
+  User
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -20,6 +22,7 @@ interface GlobalSound {
   name: string;
   base64: string;
   mimeType: string;
+  uploaderName?: string;
 }
 
 const SoundStoreManager: React.FC = () => {
@@ -63,6 +66,28 @@ const SoundStoreManager: React.FC = () => {
           });
         });
       }
+    }
+  };
+
+  const handleDownload = (sound: GlobalSound) => {
+    try {
+      const mime = sound.mimeType === "audio/mp3" ? "audio/mpeg" : sound.mimeType;
+      let extension = sound.mimeType.split('/')[1] || 'mp3';
+      if (extension === 'mpeg') extension = 'mp3';
+      
+      const link = document.createElement("a");
+      link.href = `data:${mime};base64,${sound.base64}`;
+      link.download = `${sound.name}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Downloading ${sound.name}`, {
+        style: { background: "#1e293b", color: "#10b981", border: "1px solid #10b98133" }
+      });
+    } catch (err) {
+      console.error("Download failed:", err);
+      toast.error("Failed to download sound");
     }
   };
 
@@ -150,7 +175,12 @@ const SoundStoreManager: React.FC = () => {
                   </div>
                   <div className="text-left">
                     <p className="text-xl font-black italic uppercase text-white tracking-tight">{sound.name}</p>
-                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{sound.mimeType}</p>
+                    <div className="flex gap-2 items-center">
+                      <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{sound.mimeType}</p>
+                      {sound.uploaderName && (
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">• {sound.uploaderName}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -202,8 +232,9 @@ const SoundStoreManager: React.FC = () => {
         </div>
 
         <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border-2 border-blue-500/10 overflow-hidden shadow-2xl">
-          <div className="grid grid-cols-4 font-black text-blue-400 text-[10px] uppercase tracking-[0.4em] bg-slate-950/40 px-8 py-6 border-b-2 border-blue-500/10 text-left">
+          <div className="grid grid-cols-5 font-black text-blue-400 text-[10px] uppercase tracking-[0.4em] bg-slate-950/40 px-8 py-6 border-b-2 border-blue-500/10 text-left">
             <div className="col-span-2 flex items-center gap-2 px-4"><Music2 className="w-3 h-3" /> Codename</div>
+            <div className="flex items-center gap-2 px-4"><User className="w-3 h-3" /> Source</div>
             <div className="flex items-center gap-2 px-4"><Activity className="w-3 h-3" /> Format</div>
             <div className="text-right px-4">Actions</div>
           </div>
@@ -224,10 +255,13 @@ const SoundStoreManager: React.FC = () => {
                   key={sound._id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="grid grid-cols-4 items-center px-8 py-6 hover:bg-white/5 transition-all group text-left"
+                  className="grid grid-cols-5 items-center px-8 py-6 hover:bg-white/5 transition-all group text-left"
                 >
                   <div className="col-span-2 px-4">
                     <p className="text-lg font-black italic uppercase text-gray-100">{sound.name}</p>
+                  </div>
+                  <div className="px-4">
+                    <p className="text-[10px] font-black uppercase text-blue-400/60 truncate">{sound.uploaderName || "SYSTEM"}</p>
                   </div>
                   <div className="px-4">
                     <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-blue-400">
@@ -252,6 +286,18 @@ const SoundStoreManager: React.FC = () => {
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : (
                         <Check className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDownload(sound)}
+                      disabled={applyingId === sound._id}
+                      className="p-2.5 bg-blue-500/10 border-2 border-blue-500/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-xl transition-all"
+                      title="Download"
+                    >
+                      {applyingId === sound._id ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
                       )}
                     </button>
                     {isAdmin && (

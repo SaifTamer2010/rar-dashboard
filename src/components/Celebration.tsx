@@ -23,16 +23,17 @@ export default function Celebration({ trigger }: Props) {
   useEffect(() => {
     if (!trigger) return;
 
-    const newParticles = Array.from({ length: 30 }, (_, i) => ({
-      id: Date.now() + i,
-      emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-      x: Math.random() * 100, // % from left
-      angle: Math.random() * 60 - 30, // tilt
-      speed: 1 + Math.random() * 2,
-      size: 1.5 + Math.random() * 2,
-    }));
-
-    setParticles(newParticles);
+    // Use a functional update or just the value since we're replacing the whole array
+    setParticles(() => 
+      Array.from({ length: 30 }, (_, i) => ({
+        id: Date.now() + i,
+        emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
+        x: Math.random() * 100, // % from left
+        angle: Math.random() * 60 - 30, // tilt
+        speed: 1 + Math.random() * 2,
+        size: 1.5 + Math.random() * 2,
+      }))
+    );
 
     // Clear after animation
     const timeout = setTimeout(() => setParticles([]), 2000);

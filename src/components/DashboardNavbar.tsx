@@ -42,7 +42,7 @@ const DashboardNavbar = () => {
 
   const getPageLabel = () => {
     if (pathname === "/dashboard") return ""; // Dashboard is the home, no breadcrumb needed typically or just empty
-    if (pathname === "/leaderboard") return "Leaderboard";
+    // if (pathname === "/leaderboard") return "Leaderboard";
     if (pathname === "/settings") return "Settings";
     if (pathname === "/admin/sounds") return "Sound Store";
     if (pathname.startsWith("/admin")) return "Admin Panel";
@@ -55,13 +55,14 @@ const DashboardNavbar = () => {
 
   const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: "Leaderboard", href: "/leaderboard", icon: <Trophy className="w-4 h-4" /> },
+    // { label: "Leaderboard", href: "/leaderboard", icon: <Trophy className="w-4 h-4" /> },
     { label: "Settings", href: "/settings", icon: <Settings className="w-4 h-4" /> },
+    {label:"Sound Store", href:"/sounds", icon:<Music2 className="w-4 h-4" />}
   ];
 
   if (isAdmin) {
     menuItems.push({ label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> });
-    menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
+    // menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
   }
 
   return (

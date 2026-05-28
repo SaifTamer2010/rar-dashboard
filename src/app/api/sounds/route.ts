@@ -29,15 +29,24 @@ export async function GET(req: NextRequest) {
           name: { $first: "$name" },
           mimeType: { $first: "$mimeType" },
           createdAt: { $first: "$createdAt" },
-          base64: { $first: "$base64" }
+          base64: { $first: "$base64" },
+          uploadedBy: { $first: "$uploadedBy" }
       }},
       { $sort: { createdAt: -1 } },
+      { $lookup: {
+          from: "users",
+          localField: "uploadedBy",
+          foreignField: "_id",
+          as: "uploader"
+      }},
+      { $unwind: { path: "$uploader", preserveNullAndEmptyArrays: true } },
       { $project: {
           _id: "$docId",
           name: 1,
           mimeType: 1,
           createdAt: 1,
-          base64: 1
+          base64: 1,
+          uploaderName: "$uploader.name"
       }}
     ]);
     

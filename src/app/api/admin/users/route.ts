@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await connectToDatabase();
-    const { name, password, role, telegramUsername, soundUrl } = await req.json();
+    const { name, password, role, telegramUsername, soundUrl, isActive } = await req.json();
 
     if (!name || !password) {
       return NextResponse.json(
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       role: role || "user", // Default to 'user' if not provided
       telegramUsername: telegramUsername || null,
       soundUrl: soundUrl || null,
+      isActive: isActive !== undefined ? isActive : true,
     });
 
     return NextResponse.json(

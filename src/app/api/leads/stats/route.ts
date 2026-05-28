@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     const byUser = await User.aggregate([
-      { $match: { role: { $in: ["user", "admin"] } } },
+      { $match: { isActive: true } },
       {
         $lookup: {
           from: "leads",

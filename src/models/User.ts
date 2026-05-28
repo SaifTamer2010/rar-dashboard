@@ -5,6 +5,7 @@ export interface IUser extends Document {
   password: string | null;
   soundUrl: string;
   role: string;
+  isActive: boolean;
   telegramUsername: string | null; // add this
   leadMessageTemplate: string | null;
   seenVersion: string;
@@ -16,6 +17,7 @@ const UserSchema = new Schema<IUser>({
   password: { type: String, default: null },
   soundUrl: { type: String, default: null },
   role: { type: String, enum: ["admin", "user", "viewer"], default: "user" },
+  isActive: { type: Boolean, default: true },
   telegramUsername: { type: String, default: null }, // add this
   leadMessageTemplate: { type: String, default: null },
   seenVersion: { type: String, default: "0.0.0" },

@@ -17,13 +17,20 @@ export async function PUT(
   try {
     await connectToDatabase();
     const { id } = await params;
-    const { name, password, role, telegramUsername, soundUrl } = await req.json();
+    const body = await req.json();
+    const { password } = body;
+    const updateFields: any = {};
+    const allowedFields = ["name", "role", "isActive","telegramUsername", "soundUrl"];
+    
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) {
+        updateFields[field] = body[field];
+      }
+    });
 
-    const updateFields: any = { name, role, telegramUsername, soundUrl };
     if (password) {
       updateFields.password = await bcrypt.hash(password, 10);
     }
-
     const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
       new: true,
     }).select("-password"); // Exclude password from the returned object
@@ -31,7 +38,6 @@ export async function PUT(
     if (!updatedUser) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-
     return NextResponse.json(
       { message: "User updated successfully", user: updatedUser },
       { status: 200 }
