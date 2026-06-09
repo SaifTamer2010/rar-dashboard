@@ -3,9 +3,14 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongodb";
 import User from "@/models/User";
+import Token from "@/models/Token";
 
 export const authOptions = {
-  session: { strategy: "jwt" as const },
+  trustHost: true,
+  session: { 
+    strategy: "jwt" as const,
+    maxAge: 60 * 15, // 15 min
+  },
   pages: {
     signIn: "/sign-in",
   },
@@ -15,6 +20,7 @@ export const authOptions = {
         token.userId = user.id as string;
         token.name = user.name ?? "";
         token.role = (user as any).role ?? "user";
+        token.refreshToken = (user as any).refreshToken; // ← add
       }
       return token;
     },
@@ -35,30 +41,34 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.name || !credentials?.password) return null;
-
+        console
         await connectToDatabase();
 
         const user = await User.findOne({ name: credentials.name });
-
         if (!user) return null;
-
-        // Prevent inactive users from logging in
         if (user.isActive === false) return null;
-
-        // No password means account exists but never set one
         if (!user.password) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.password,
         );
-
         if (!isValid) return null;
+
+        // Generate and store refresh token
+        const refreshToken = crypto.randomUUID();
+        await Token.create({
+          user_id: user._id,
+          refresh_token: refreshToken,
+          revoked: false,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
 
         return {
           id: user._id.toString(),
           name: user.name,
-          role: user.role, // add this
+          role: user.role,
+          refreshToken,
         };
       },
     }),

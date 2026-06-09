@@ -49,6 +49,11 @@ const DashboardNavbar = () => {
     return "";
   };
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout' , {method:"POST"});
+    await signOut({callbackUrl:'/sign-in'})
+  }
+
   const pageLabel = getPageLabel();
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -65,6 +70,8 @@ const DashboardNavbar = () => {
     // menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
   }
 
+
+  
   return (
     <div className="w-full flex justify-between items-center mb-8 px-4 py-3 bg-slate-900/60 backdrop-blur-xl border-2 border-blue-500/20 rounded-2xl sticky top-2 z-[100] shadow-2xl shadow-blue-500/5">
       <div className="flex items-center gap-4">
@@ -158,7 +165,7 @@ const DashboardNavbar = () => {
 
               <div className="border-t-2 border-blue-500/10 mt-2 pt-2">
                 <button
-                  onClick={() => signOut({ callbackUrl: "/sign-in" })}
+                  onClick={() => handleLogout()}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-400/80 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer"
                 >
                   <div className="group-hover:scale-110 transition-transform">
