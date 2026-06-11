@@ -5,6 +5,7 @@ import { SignJWT } from "jose";
 
 export async function POST(req: NextRequest) {
   const refreshToken = req.cookies.get("refresh_token")?.value;
+  console.log('yeah we are hitting the refresh token')
 
   if (!refreshToken) {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
