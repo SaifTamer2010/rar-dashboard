@@ -63,13 +63,16 @@ const DashboardNavbar = () => {
   const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     // { label: "Leaderboard", href: "/leaderboard", icon: <Trophy className="w-4 h-4" /> },
-    { label: "Property Search", href: "/property-search", icon: <Home className="w-4 h-4" /> },
     {label:"Sound Store", href:"/sounds", icon:<Music2 className="w-4 h-4" />},
     { label: "Settings", href: "/settings", icon: <Settings className="w-4 h-4" /> },
   ];
 
   if (isAdmin) {
-    menuItems.push({ label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> });
+    menuItems.push(
+    { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> },
+    { label: "Property Search", href: "/property-search", icon: <Home className="w-4 h-4" /> },
+    );
+    menuItems
     // menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
   }
 
