@@ -57,6 +57,8 @@ export default function SignInPage() {
       setError("Incorrect password.");
       return;
     }
+    
+    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({name}) , headers:{"content-Type":"application/json"}})
 
     router.push("/dashboard");
   }
@@ -95,7 +97,8 @@ export default function SignInPage() {
       password,
       redirect: false,
     });
-
+    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({name}) , headers:{"content-Type":"application/json"}})
+    
     setLoading(false);
     router.push("/dashboard");
   }
