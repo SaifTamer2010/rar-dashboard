@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import UserManagement from "@/components/UserManagement";
 import CampaignManagement from "@/components/CampaignManagement";
 import LeadManagement from "@/components/LeadManagement";
-import DashboardNavbar from "@/components/DashboardNavbar";
 
 const AdminPageContent = () => {
   const router = useRouter();
@@ -35,7 +34,11 @@ const AdminPageContent = () => {
   ];
 
   if (status === "loading") {
-    return <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">Verifying...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+        Verifying…
+      </div>
+    );
   }
 
   if (session?.user?.role !== "admin") {
@@ -48,58 +51,65 @@ const AdminPageContent = () => {
   };
 
   return (
-    <div className=" text-white p-4 md:p-8 pb-32 selection:bg-blue-500/30">
-     
+    <div className="min-h-screen bg-muted/40">
+      <main className="mx-auto max-w-300 px-6 py-10">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage who logs leads, what they log against, and clean up mistakes.
+            </p>
+          </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-        <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent italic uppercase tracking-tighter">
-          Admin <span className="text-blue-500">Control</span>
-        </h1>
-        
-        <div className="flex bg-slate-900/40 backdrop-blur-2xl p-1.5 rounded-[1.5rem] border-2 border-blue-500/10 shadow-xl ring-1 ring-blue-500/5">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`relative px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all z-10 ${
-                activeTab === tab.id ? "text-white" : "text-gray-500 hover:text-gray-300"
-              }`}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTabBadge"
-                  className="absolute inset-0 bg-blue-600 rounded-2xl -z-10 shadow-lg shadow-blue-500/20"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
+          <div className="flex gap-1 rounded-lg border bg-background p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`relative z-10 cursor-pointer rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
+                  activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTabBadge"
+                    className="absolute inset-0 -z-10 rounded-md bg-muted"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="relative overflow-visible">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
           >
             {activeTab === "users" && <UserManagement />}
             {activeTab === "campaigns" && <CampaignManagement />}
             {activeTab === "leads" && <LeadManagement />}
           </motion.div>
         </AnimatePresence>
-      </div>
+      </main>
     </div>
   );
 };
 
 export default function AdminPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#020617] flex items-center justify-center text-white font-black uppercase tracking-widest">Waking Up Admin...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+          Loading admin…
+        </div>
+      }
+    >
       <AdminPageContent />
     </Suspense>
   );

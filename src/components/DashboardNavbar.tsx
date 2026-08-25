@@ -7,16 +7,16 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
-  Trophy,
   Settings,
   ShieldCheck,
   LogOut,
   ChevronDown,
   RefreshCcw,
   Music2,
-  Home
+  Home,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 const DashboardNavbar = () => {
   const { data: session } = useSession();
@@ -38,154 +38,147 @@ const DashboardNavbar = () => {
     };
   }, [isOpen]);
 
+  // Route changes should never leave the menu hanging open.
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
   const isAdmin = session?.user?.role === "admin";
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
-
-  const getPageLabel = () => {
-    if (pathname === "/dashboard") return ""; // Dashboard is the home, no breadcrumb needed typically or just empty
-    // if (pathname === "/leaderboard") return "Leaderboard";
-    if (pathname === "/settings") return "Settings";
-    // if (pathname === "/property-search") return "Property Search";
-    if (pathname === "/sounds") return "Sound Store";
-    if (pathname.startsWith("/admin")) return "Admin Panel";
-    return "";
-  };
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout' , {method:"POST"});
     await signOut({callbackUrl:'/sign-in'})
   }
 
-  const pageLabel = getPageLabel();
-
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const menuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    // { label: "Leaderboard", href: "/leaderboard", icon: <Trophy className="w-4 h-4" /> },
-    {label:"Sound Store", href:"/sounds", icon:<Music2 className="w-4 h-4" />},
-    { label: "Settings", href: "/settings", icon: <Settings className="w-4 h-4" /> },
+    { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="size-4" /> },
+    { label: "Sound Store", href: "/sounds", icon: <Music2 className="size-4" /> },
+    { label: "Settings", href: "/settings", icon: <Settings className="size-4" /> },
   ];
 
   if (isAdmin) {
     menuItems.push(
-    { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> },
-    { label: "Property Search", href: "/property-search", icon: <Home className="w-4 h-4" /> },
+      { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="size-4" /> },
+      { label: "Property Search", href: "/property-search", icon: <Home className="size-4" /> },
     );
-    menuItems
-    // menuItems.push({ label: "Sound Store", href: "/admin/sounds", icon: <Music2 className="w-4 h-4" /> });
   }
 
+  const isActive = (href: string) =>
+    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
-  
   return (
-    <div className="w-full flex justify-between items-center mb-8 px-4 py-3 bg-slate-900/60 backdrop-blur-xl border-2 border-blue-500/20 rounded-2xl sticky top-2 z-[100] shadow-2xl shadow-blue-500/5">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform shadow-lg shadow-blue-500/40">
-            <span className="text-white font-bold text-sm tracking-tighter">D</span>
+    <header className="sticky top-0 z-100 w-full border-b bg-background/85 backdrop-blur">
+      <div className="mx-auto flex h-15 max-w-300 items-center gap-8 px-6">
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+          <div className="flex size-5.5 items-center justify-center rounded-md bg-foreground text-xs text-background">
+            D
           </div>
-          <h1 className="text-lg md:text-xl font-bold text-gray-200 tracking-tight font-bold italic uppercase">
-            <span className="text-blue-400">Daily</span> Dashboard
-          </h1>
+          <span className="text-[15px] font-semibold tracking-tight">Daily Dashboard</span>
         </Link>
 
-        {pageLabel && (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-            <span className="text-gray-600 font-medium text-xl">/</span>
-            <span className="text-blue-400/80 font-bold text-sm md:text-base tracking-wide">
-              {pageLabel}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="relative" ref={menuRef}>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={toggleMenu}
-          className="flex items-center gap-3 p-1.5 pl-3 pr-2 bg-slate-800/40 hover:bg-slate-800/60 transition-colors rounded-xl border-2 border-blue-500/20 cursor-pointer shadow-lg"
-        >
-          <span className="text-gray-300 font-medium text-sm hidden sm:inline">
-            {session?.user?.name || "User"}
-          </span>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/20">
-            {userInitial}
-          </div>
-          <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          </motion.div>
-        </motion.button>
-
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className="absolute right-0 mt-3 w-56 bg-slate-900/95 backdrop-blur-2xl border-2 border-blue-500/30 rounded-2xl shadow-2xl p-2 z-20 overflow-hidden ring-1 ring-blue-500/10"
+        {/* Inline nav on desktop; the avatar menu carries the same links on small screens. */}
+        <nav className="hidden items-center gap-6 text-sm md:flex">
+          {menuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "transition-colors",
+                isActive(item.href)
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
             >
-              <div className="px-3 py-2 border-b-2 border-blue-500/10 mb-2">
-                <p className="text-[10px] font-bold text-blue-400/60 uppercase tracking-widest">Navigation</p>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3">
+          <span className="hidden items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground sm:inline-flex">
+            <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+            Live
+          </span>
+
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={toggleMenu}
+              aria-expanded={isOpen}
+              className="flex cursor-pointer items-center gap-2 rounded-lg border bg-background py-1 pr-1.5 pl-2.5 transition-colors hover:bg-muted"
+            >
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {session?.user?.name || "User"}
+              </span>
+              <div className="flex size-7 items-center justify-center rounded-md bg-muted text-xs font-medium">
+                {userInitial}
               </div>
+              <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
+                <ChevronDown className="size-4 text-muted-foreground" />
+              </motion.div>
+            </button>
 
-              <div className="space-y-1">
-                {menuItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-400 hover:bg-blue-600/10 hover:text-white transition-all group"
-                  >
-                    <div className="text-blue-400/80 group-hover:text-blue-400 group-hover:scale-110 transition-transform">
-                      {item.icon}
-                    </div>
-                    <span className="font-medium text-sm">{item.label}</span>
-                  </Link>
-                ))}
-
-                {isAdmin && (
-                  <button
-                    onClick={async () => {
-                      setIsOpen(false);
-                      const res = await fetch("/api/admin/force-refresh", { method: "POST" });
-                      if (res.ok) {
-                        toast.success("All Dashboards Refreshed!", {
-                          style: { background: "#1e293b", color: "#60a5fa", border: "1px solid #3b82f633" }
-                        });
-                      } else {
-                        toast.error("Failed to refresh");
-                      }
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-amber-400/80 hover:bg-amber-500/10 hover:text-amber-400 transition-all group cursor-pointer"
-                  >
-                    <div className="group-hover:rotate-180 transition-transform duration-500">
-                      <RefreshCcw className="w-4 h-4" />
-                    </div>
-                    <span className="font-medium text-sm">Force Global Refresh</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="border-t-2 border-blue-500/10 mt-2 pt-2">
-                <button
-                  onClick={() => handleLogout()}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-400/80 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer"
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97, y: -4 }}
+                  transition={{ duration: 0.14, ease: "easeOut" }}
+                  className="absolute right-0 z-20 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border bg-background p-1.5 shadow-lg"
                 >
-                  <div className="group-hover:scale-110 transition-transform">
-                    <LogOut className="w-4 h-4" />
+                  <div className="flex flex-col gap-0.5 md:hidden">
+                    {menuItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                    <div className="my-1.5 h-px bg-border" />
                   </div>
-                  <span className="font-bold text-sm">Sign Out</span>
-                </button>
-              </div>
-            </motion.div>
 
-          )}
-        </AnimatePresence>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          setIsOpen(false);
+                          const res = await fetch("/api/admin/force-refresh", { method: "POST" });
+                          if (res.ok) {
+                            toast.success("All dashboards refreshed");
+                          } else {
+                            toast.error("Failed to refresh");
+                          }
+                        }}
+                        className="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <RefreshCcw className="size-4 transition-transform duration-500 group-hover:rotate-180" />
+                        <span>Force global refresh</span>
+                      </button>
+                      <div className="my-1.5 h-px bg-border" />
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => handleLogout()}
+                    className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <LogOut className="size-4" />
+                    <span>Sign out</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
-    </div>
+    </header>
   );
 };
 

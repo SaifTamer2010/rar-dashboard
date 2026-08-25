@@ -1,24 +1,26 @@
 'use client'
 
-import {motion, AnimatePresence} from 'framer-motion'
-import { Home } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search } from 'lucide-react'
 import { useState } from 'react'
 
-const page = () => {
-    const [dataResponse, setDataResponse] = useState('null')
-    const [searchBar,setSearchBar] = useState('')
-    const [loading,setLoading] = useState(false)
+const cardClass = "rounded-xl border bg-background"
 
-    const submitSearch = async () =>{
+const Page = () => {
+    const [dataResponse, setDataResponse] = useState('null')
+    const [searchBar, setSearchBar] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const submitSearch = async () => {
         setLoading(true)
         try {
             const res = await fetch('http://localhost:8000/search',
                 {
-                    method:"POST",
-                    body:searchBar
+                    method: "POST",
+                    body: searchBar
                 }
             )
-            
+
             const data = await res.json()
             console.log(data)
             setLoading(false)
@@ -26,81 +28,96 @@ const page = () => {
             console.log(err)
             setLoading(false)
         }
-    } 
+    }
 
   return (
-    <div className=' grid grid-rows-[1fr_3fr] gap-6 p-4'>
-        
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap items-center justify-center gap-6 bg-slate-900/40 backdrop-blur-3xl p-6 rounded-[2.5rem] border-2 border-blue-500/20 shadow-2xl shadow-blue-500/5 relative"
-        >
-            <header className='w-full'>
-             <h3 className="text-2xl font-bold text-white  uppercase tracking-widest text-center">
-               Search property through realtor
-              </h3>
-            </header>
+    <div className="min-h-screen bg-muted/40">
+      <main className="mx-auto max-w-240 px-6 py-10">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Property search</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Look up a property through Realtor by address.
+          </p>
+        </div>
 
-            <div className='flex justify-center gap-4'>
-            <input className='bg- backdrop-blur-3xl p-4 rounded-[1rem] border-1 border-blue-600/20 shadow-2xl shadow-blue-500/5 w-150 focus:outline-blue-300/20 focus:outline-2 relative' 
-            onChange={(e)=>setSearchBar(e.target.value)}/>
-
-            <div className="flex items-end">
+        <div className={`${cardClass} p-4`}>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={searchBar}
+                onChange={(e) => setSearchBar(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
+                placeholder="123 Main St, Chicago, IL 60601"
+                className="w-full rounded-lg border bg-background py-2.5 pr-3 pl-9 text-sm outline-none transition-[box-shadow,border-color] placeholder:text-muted-foreground/70 focus-visible:border-muted-foreground focus-visible:ring-[3px] focus-visible:ring-foreground/10"
+              />
+            </div>
             <button
               onClick={submitSearch}
-             className={`flex items-center gap-2 h-12 px-8 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${loading
-                ?  "bg-slate-800/50 text-gray-600 border-2 border-white/5 cursor-not-allowed":"bg-blue-500/10 text-blue-500 border-2 border-blue-500/20 hover:bg-blue-500 hover:text-white"
-                }`}
+              disabled={loading}
+              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Search
+              {loading ? 'Searching…' : 'Search'}
             </button>
           </div>
-          </div>
+        </div>
 
-        {dataResponse == "search-received" && <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className=" bg-slate-900/40 backdrop-blur-3xl p-10 rounded-[1.5rem] border-2 border-blue-500/20 shadow-2xl shadow-blue-500/5 absolute top-45 w-220 max-h-150 flex flex-col gap-4"
-        >
-            <div className='text-xl border-b-1 border-slate-900/100 pb-2 hover:bg-slate-900/100 transition-all p-2 flex flex-col gap-2 cursor-pointer rounded-md'>
-                <h1>123 Main st,Chicago,Il 23457</h1>
-                <h1>Sold</h1>
-            </div>
-       
-        </motion.div>}
-        
-           
-            
-        </motion.div>
+        <AnimatePresence>
+          {dataResponse === 'search-received' && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={`${cardClass} mt-4 overflow-hidden`}
+            >
+              <p className="border-b bg-muted/40 px-4 py-2.5 text-xs text-muted-foreground">Matches</p>
+              <div className="divide-y">
+                <button className="flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50">
+                  <span className="truncate text-sm font-medium">123 Main St, Chicago, IL 23457</span>
+                  <span className="shrink-0 rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    Sold
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          )}
 
-        {dataResponse == 'property-received' && <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className=" bg-slate-900/40 backdrop-blur-3xl p-10 rounded-[2.5rem] border-2 border-blue-500/20 shadow-2xl shadow-blue-500/5"
-        >
-           <header className=''>
-             <h3 className="text-2xl font-bold text-white mb-8 uppercase tracking-widest w-screen inline-flex gap-2">
-              <Home className='mr-2 mt-0.5'/> Property <span className='text-blue-500'>details</span>
-              </h3>
-            </header>
-            <div>
-                <h6>link</h6>
-                <h6>property type</h6>
-                <h6>estimate</h6>
-                <h6>beds</h6>
-                <h6>baths</h6>
-                <h6>sqft</h6>
-                <h6>lot sqft</h6>
-                <h6>year built</h6>
-                <h6>address</h6>
-                <h6>status</h6>
-                <h6>last sold price</h6>
-                <h6>last sold date</h6>
-            </div>
-        </motion.div>}
+          {dataResponse === 'property-received' && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={`${cardClass} mt-4 p-6`}
+            >
+              <h2 className="text-[15px] font-semibold tracking-tight">Property details</h2>
+
+              <dl className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                {[
+                  'Link',
+                  'Property type',
+                  'Estimate',
+                  'Beds',
+                  'Baths',
+                  'Sqft',
+                  'Lot sqft',
+                  'Year built',
+                  'Address',
+                  'Status',
+                  'Last sold price',
+                  'Last sold date',
+                ].map((label) => (
+                  <div key={label} className="flex items-center justify-between gap-4 border-b pb-2">
+                    <dt className="text-[13px] text-muted-foreground">{label}</dt>
+                    <dd className="truncate text-sm font-medium">—</dd>
+                  </div>
+                ))}
+              </dl>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   )
 }
 
-export default page
+export default Page

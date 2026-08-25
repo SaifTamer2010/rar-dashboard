@@ -6,7 +6,11 @@ import DashboardNavbar from "@/components/DashboardNavbar";
 import { usePathname } from "next/navigation";
 
 import "./globals.css";
+import { Inter,Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
 
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const giest = Geist({subsets:['latin'],variable:'--font-sans'});
 
 
 export default function RootLayout({
@@ -15,13 +19,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  // Landing and auth screens carry their own branding, so they skip the app chrome.
+  const showNavbar = pathname !== "/" && !pathname.startsWith("/sign-in");
+
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", giest.variable)}>
       <body className="antialiased" suppressHydrationWarning>
         <Analytics />
         <Providers>
-          <div className="max-h-screen grid grid-rows-[auto_1fr]">
-            {pathname === '/sign-in' ? null : <DashboardNavbar />}
+          <div className="min-h-screen grid grid-rows-[auto_1fr]">
+            {showNavbar && <DashboardNavbar />}
             {children}
           </div>
           </Providers>

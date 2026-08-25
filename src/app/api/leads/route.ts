@@ -53,14 +53,15 @@ export async function POST(req: NextRequest) {
       campaignId,
     });
 
-    await pusherServer.trigger("leads-channel", "lead-added", {
-      userName: user.name,
-      userId: user._id.toString(), // just send the ID
-    });
-
     // after Lead.create(...)
     const campaignObject = await Campaign.findById(campaignId);
     const campaignName = campaignObject?.name || "Unknown Campaign";
+
+    await pusherServer.trigger("leads-channel", "lead-added", {
+      userName: user.name,
+      userId: user._id.toString(), // just send the ID
+      campaignName,
+    });
 
     const mention = user.telegramUsername
       ? `@${user.telegramUsername}`

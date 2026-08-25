@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: set this to true or false
+  unrs-resolver: true
+  workerd: set this to true or false

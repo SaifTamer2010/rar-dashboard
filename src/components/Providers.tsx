@@ -38,13 +38,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster
           position="bottom-left"
+          gutter={10}
           toastOptions={{
-            style: {
-              background: "#0f172a",
-              color: "#fff",
-              border: "1px solid #1e293b",
-            },
             duration: 5000,
+            // Theme tokens rather than fixed hex, so toasts follow light/dark like the rest of the app.
+            style: {
+              background: "var(--popover)",
+              color: "var(--popover-foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: "0.75rem",
+              padding: "10px 14px",
+              fontSize: "14px",
+              boxShadow: "0 12px 32px -18px rgba(9, 9, 11, 0.45)",
+              maxWidth: "380px",
+            },
+            success: { iconTheme: { primary: "var(--primary)", secondary: "var(--background)" } },
+            error: { iconTheme: { primary: "var(--destructive)", secondary: "var(--background)" } },
           }}
         />
       </Provider>
