@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Settings,
   ShieldCheck,
+  ShieldAlert,
   LogOut,
   ChevronDown,
   RefreshCcw,
@@ -44,6 +45,7 @@ const DashboardNavbar = () => {
   }, [pathname]);
 
   const isAdmin = session?.user?.role === "admin";
+  const isSuperAdmin = session?.user?.role === "super_admin";
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
 
   const handleLogout = async () => {
@@ -64,6 +66,14 @@ const DashboardNavbar = () => {
       { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="size-4" /> },
       { label: "Property Search", href: "/property-search", icon: <Home className="size-4" /> },
     );
+  }
+
+  if (isSuperAdmin) {
+    menuItems.push({
+      label: "Super Admin",
+      href: "/super-admin",
+      icon: <ShieldAlert className="size-4" />,
+    });
   }
 
   const isActive = (href: string) =>
