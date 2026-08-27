@@ -20,7 +20,11 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   // Landing and auth screens carry their own branding, so they skip the app chrome.
-  const showNavbar = pathname !== "/" && !pathname.startsWith("/sign-in");
+  const showNavbar =
+    pathname !== "/" &&
+    !pathname.startsWith("/sign-in") &&
+    !pathname.startsWith("/sign-up") &&
+    !pathname.startsWith("/join");
 
   return (
     <html lang="en" className={cn("font-sans", giest.variable)}>

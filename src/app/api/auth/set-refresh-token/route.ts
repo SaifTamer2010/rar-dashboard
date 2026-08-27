@@ -4,11 +4,11 @@ import Token from "@/models/Token";
 import User from "@/models/User";
 
 export async function POST(req: NextRequest) {
-  const { name } = await req.json();
+  const { email } = await req.json();
 
   await connectToDatabase();
 
-  const user = await User.findOne({ name });
+  const user = await User.findOne({ email });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   // Get the latest non-revoked token for this user

@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import FeatureUpdateModal from "@/components/FeatureUpdateModal";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { roleHome } from "@/lib/roles";
 
 /** Matches the sign-in page fields so both surfaces read as one system. */
 const fieldClass =
@@ -41,8 +43,17 @@ export default function DashboardPage() {
   const [shameActive, setShameActive] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const isViewer = session?.user?.role === "viewer";
+  // Agents own this page; super admins may peek. Leaders and owners have their own.
+  const isAgentSurface =
+    !session || ["agent", "super_admin"].includes(session.user?.role ?? "");
+
+  useEffect(() => {
+    if (sessionStatus === "loading" || isAgentSurface) return;
+    router.push(roleHome(session?.user?.role));
+  }, [sessionStatus, isAgentSurface, session, router]);
 
   const fetchStats = useCallback((params?: { startDate?: string; endDate?: string }) => {
     dispatch(fetchLeadsStats(params));
@@ -205,6 +216,8 @@ export default function DashboardPage() {
       alert("Failed to send");
     }
   }
+
+  if (!isAgentSurface) return null;
 
   const hasRange = Boolean(dateRange.start && dateRange.end);
   const rangeLabel = hasRange ? `${dateRange.start} → ${dateRange.end}` : "Today · live";

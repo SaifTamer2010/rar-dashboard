@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { roleHome } from "@/lib/roles";
 
 /** Shared input styling — there is no Input in components/ui yet. */
 const fieldClass =
@@ -14,22 +15,23 @@ const submitClass =
 
 export default function SignInPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [step, setStep] = useState<"name" | "password" | "create">("name");
+  const [step, setStep] = useState<"email" | "password" | "create">("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Step 1 — check if user exists and has a password
-  async function handleNameSubmit() {
-    if (!name.trim()) return;
+  async function handleEmailSubmit() {
+    if (!email.trim()) return;
     setLoading(true);
     setError("");
 
     const res = await fetch("/api/auth/check-user", {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ email }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -37,9 +39,11 @@ export default function SignInPage() {
     setLoading(false);
 
     if (!data.exists) {
-      setError("No account found with that name.");
+      setError("No account found with that email.");
       return;
     }
+
+    setName(data.name ?? "");
 
     if (data.hasPassword) {
       setStep("password");
@@ -54,7 +58,7 @@ export default function SignInPage() {
     setError("");
 
     const res = await signIn("credentials", {
-      name,
+      email,
       password,
       redirect: false,
     });
@@ -66,9 +70,10 @@ export default function SignInPage() {
       return;
     }
 
-    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({name}) , headers:{"content-Type":"application/json"}})
+    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({email}) , headers:{"content-Type":"application/json"}})
 
-    router.push("/dashboard");
+    const fresh = await getSession();
+    router.push(roleHome(fresh?.user?.role));
   }
 
   // Step 2b — create new password then sign in
@@ -87,7 +92,7 @@ export default function SignInPage() {
 
     const res = await fetch("/api/auth/create-password", {
       method: "POST",
-      body: JSON.stringify({ name, password }),
+      body: JSON.stringify({ email, password }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -101,18 +106,19 @@ export default function SignInPage() {
 
     // Auto sign in after creating password
     await signIn("credentials", {
-      name,
+      email,
       password,
       redirect: false,
     });
-    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({name}) , headers:{"content-Type":"application/json"}})
+    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({email}) , headers:{"content-Type":"application/json"}})
 
+    const fresh = await getSession();
     setLoading(false);
-    router.push("/dashboard");
+    router.push(roleHome(fresh?.user?.role));
   }
 
   function goBack() {
-    setStep("name");
+    setStep("email");
     setPassword("");
     setConfirmPassword("");
     setError("");
@@ -123,13 +129,13 @@ export default function SignInPage() {
 
   const subheading =
     step === "create"
-      ? `First time here — pick a password for ${name}.`
+      ? `First time here — pick a password for ${name || email}.`
       : step === "password"
-        ? `Signing in as ${name}.`
-        : "Enter your name to continue to your dashboard.";
+        ? `Signing in as ${name || email}.`
+        : "Enter your email to continue to your dashboard.";
 
   return (
-    <div className="grid min-h-screen grid-cols-1 bg-background text-foreground lg:grid-cols-2">
+    <div className="grid min-h-screen grid-cols-1 bg-background text-foreground lg:grid-cols-[60%_40%]">
       {/* Brand panel */}
       <aside className="hidden flex-col justify-between bg-zinc-950 p-10 text-zinc-50 lg:flex">
         <Link href="/" className="flex w-fit items-center gap-2">
@@ -139,7 +145,7 @@ export default function SignInPage() {
           <span className="text-[15px] font-semibold tracking-tight">Daily Dashboard</span>
         </Link>
 
-        <div className="flex max-w-[24ch] flex-col gap-4">
+        <div className="flex max-w-[50ch] flex-col gap-4 mx-auto">
           <p className="text-[32px] leading-tight font-semibold tracking-tighter">
             Every Lead Deserves an Entrance
           </p>
@@ -170,28 +176,35 @@ export default function SignInPage() {
             <p className="text-sm leading-relaxed text-muted-foreground">{subheading}</p>
           </div>
 
-          {/* Step 1 — Name */}
-          {step === "name" && (
+          {/* Step 1 — Email */}
+          {step === "email" && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="name" className="text-[13px] font-medium">
-                  Your name
+                <label htmlFor="email" className="text-[13px] font-medium">
+                  Email
                 </label>
                 <input
-                  id="name"
-                  type="text"
+                  id="email"
+                  type="email"
                   autoFocus
-                  placeholder="Dana Whitfield"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()}
+                  placeholder="dana@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleEmailSubmit()}
                   className={fieldClass}
                 />
               </div>
-              <button onClick={handleNameSubmit} disabled={loading} className={submitClass}>
+              <button onClick={handleEmailSubmit} disabled={loading} className={submitClass}>
                 {loading ? "Checking..." : "Continue"}
               </button>
+               <Link
+            href="/sign-in"
+            className="cursor-pointer text-center text-[13px] text-muted-foreground underline underline-offset-[3px] transition-colors hover:text-foreground"
+          >
+            Doesn't have an email yet? Sign up
+          </Link>
             </div>
+            
           )}
 
           {/* Step 2a — Existing password */}
@@ -262,14 +275,15 @@ export default function SignInPage() {
             </p>
           )}
 
-          {step !== "name" && (
+          {step !== "email" && (
             <button
               onClick={goBack}
               className="cursor-pointer text-center text-[13px] text-muted-foreground underline underline-offset-[3px] transition-colors hover:text-foreground"
             >
-              Use a different name
+              Use a different email
             </button>
           )}
+          
         </div>
       </main>
     </div>

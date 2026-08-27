@@ -33,10 +33,6 @@ const SoundStoreManager: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    fetchSounds();
-  }, []);
-
   const fetchSounds = async () => {
     setLoading(true);
     try {
@@ -50,6 +46,10 @@ const SoundStoreManager: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSounds();
+  }, []);
 
   const handlePreview = (sound: GlobalSound) => {
     if (audioRef.current) {
@@ -134,7 +134,7 @@ const SoundStoreManager: React.FC = () => {
   );
 
   const presets = sounds.slice(0, 2);
-  const isAdmin = session?.user?.role === "admin";
+  const isAdmin = ["super_admin", "busniess_owner"].includes(session?.user?.role ?? "");
 
   return (
     <div className="flex flex-col gap-8">

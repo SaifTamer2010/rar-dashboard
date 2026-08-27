@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { roleHome } from "@/lib/roles";
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -10,7 +11,9 @@ export default auth((req) => {
   }
 
   if (isLoggedIn && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(
+      new URL(roleHome((req.auth?.user as any)?.role), req.url),
+    );
   }
 });
 

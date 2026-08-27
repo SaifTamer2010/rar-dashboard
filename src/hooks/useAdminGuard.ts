@@ -8,8 +8,8 @@ export function useAdminGuard() {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session || session.user.role !== "admin") {
-      router.push("/dashboard");
+    if (!session || session.user.role !== "super_admin") {
+      router.push("/sign-in");
     }
   }, [session, status, router]);
 

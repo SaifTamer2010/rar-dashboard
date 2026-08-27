@@ -5,25 +5,25 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import SoundStoreManager from "@/components/SoundStoreManager";
 
-export default function AdminSoundsPage() {
+export default function SoundsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated" || (status === "authenticated" && session?.user?.role !== "admin")) {
-      router.push("/dashboard");
+    if (status === "unauthenticated") {
+      router.push("/sign-in");
     }
-  }, [status, session, router]);
+  }, [status, router]);
 
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 text-sm text-muted-foreground">
-        Verifying clearance…
+        Loading…
       </div>
     );
   }
 
-  if (session?.user?.role !== "admin") {
+  if (!session) {
     return null;
   }
 

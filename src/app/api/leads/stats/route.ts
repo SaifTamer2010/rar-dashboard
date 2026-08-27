@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { auth } from "@/lib/auth";
 import Lead from "@/models/Lead";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
+import { getTeamAgentIds, getViewerTeamId } from "@/lib/team";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -13,7 +20,7 @@ export async function GET(req: NextRequest) {
     const endDateParam = searchParams.get("endDate");
     const allTime = searchParams.get("allTime") === "true";
 
-    let dateMatch: Record<string, any> = {};
+    let dateMatch: { createdAt?: { $gte?: Date; $lte?: Date } } = {};
 
     if (allTime) {
       dateMatch = {}; // No date filter for all time
@@ -37,8 +44,32 @@ export async function GET(req: NextRequest) {
       dateMatch = { createdAt: { $gte: start } };
     }
 
+    // The dashboard is the viewer's team and nothing else.
+    const teamId = await getViewerTeamId(session.user?.id);
+
+    if (!teamId) {
+      return NextResponse.json({
+        byUser: [],
+        byCampaign: [],
+        totalLeads: 0,
+        lastLead: null,
+        teamId: null,
+      });
+    }
+
+    const agentIds = await getTeamAgentIds(teamId);
+    const campaigns = await Campaign.find({ team_id: teamId }, "_id name").sort({ name: 1 });
+    const campaignIds = campaigns.map((c) => c._id);
+
+    // Only this team's agents on this team's campaigns count anywhere below.
+    const leadMatch = {
+      userId: { $in: agentIds },
+      campaignId: { $in: campaignIds },
+      ...dateMatch,
+    };
+
     const byUser = await User.aggregate([
-      { $match: { isActive: true } },
+      { $match: { _id: { $in: agentIds } } },
       {
         $lookup: {
           from: "leads",
@@ -47,6 +78,7 @@ export async function GET(req: NextRequest) {
             {
               $match: {
                 $expr: { $eq: ["$userId", "$$userId"] },
+                campaignId: { $in: campaignIds },
                 ...dateMatch,
               },
             },
@@ -65,6 +97,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const byCampaign = await Campaign.aggregate([
+      { $match: { _id: { $in: campaignIds } } },
       {
         $lookup: {
           from: "leads",
@@ -73,6 +106,7 @@ export async function GET(req: NextRequest) {
             {
               $match: {
                 $expr: { $eq: ["$campaignId", "$$campaignId"] },
+                userId: { $in: agentIds },
                 ...dateMatch,
               },
             },
@@ -90,14 +124,23 @@ export async function GET(req: NextRequest) {
       { $sort: { count: -1 } },
     ]);
 
-    const totalLeads = await Lead.countDocuments(dateMatch);
+    const totalLeads = await Lead.countDocuments(leadMatch);
 
-    const lastLead = await Lead.findOne()
+    const lastLead = await Lead.findOne({
+      userId: { $in: agentIds },
+      campaignId: { $in: campaignIds },
+    })
       .sort({ createdAt: -1 })
       .populate("userId", "name")
       .populate("campaignId", "name");
 
-    return NextResponse.json({ byUser, byCampaign, totalLeads, lastLead });
+    return NextResponse.json({
+      byUser,
+      byCampaign,
+      totalLeads,
+      lastLead,
+      teamId: String(teamId),
+    });
   } catch (error) {
     console.error("stats error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

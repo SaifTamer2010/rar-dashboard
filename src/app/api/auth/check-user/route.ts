@@ -4,14 +4,14 @@ import User from "@/models/User";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name } = await req.json();
+    const { email } = await req.json();
 
-    if (!name)
-      return NextResponse.json({ error: "Name required" }, { status: 400 });
+    if (!email)
+      return NextResponse.json({ error: "Email required" }, { status: 400 });
 
     await connectToDatabase();
 
-    const user = await User.findOne({ name });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return NextResponse.json({ exists: false });
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       exists: true,
       hasPassword: !!user.password,
+      name: user.name,
     });
   } catch (error) {
     console.error("check-user error:", error);

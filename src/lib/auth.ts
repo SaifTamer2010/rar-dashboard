@@ -19,6 +19,7 @@ export const authOptions = {
       if (user) {
         token.userId = user.id as string;
         token.name = user.name ?? "";
+        token.email = user.email ?? "";
         token.role = (user as any).role ?? "user";
         token.refreshToken = (user as any).refreshToken; // ← add
         token.accessTokenExpires = Date.now() + 60 * 1 * 1000; // 1 min
@@ -66,6 +67,7 @@ export const authOptions = {
       if (token) {
         session.user.id = token.userId;
         session.user.name = token.name as string;
+        session.user.email = token.email as string;
         session.user.role = token.role;
         session.error = token.error
       }
@@ -75,15 +77,14 @@ export const authOptions = {
   providers: [
     Credentials({
       credentials: {
-        name: {},
+        email: {},
         password: {},
       },
       async authorize(credentials) {
-        if (!credentials?.name || !credentials?.password) return null;
-        console
+        if (!credentials?.email || !credentials?.password) return null;
         await connectToDatabase();
 
-        const user = await User.findOne({ name: credentials.name });
+        const user = await User.findOne({ email: credentials.email });
         if (!user) return null;
         if (user.isActive === false) return null;
         if (!user.password) return null;
@@ -106,6 +107,7 @@ export const authOptions = {
         return {
           id: user._id.toString(),
           name: user.name,
+          email: user.email,
           role: user.role,
           refreshToken,
         };

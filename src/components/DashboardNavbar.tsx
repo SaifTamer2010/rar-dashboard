@@ -10,6 +10,12 @@ import {
   Settings,
   ShieldCheck,
   ShieldAlert,
+  Trophy,
+  Users,
+  Megaphone,
+  BarChart3,
+  UserPlus,
+  Timer,
   LogOut,
   ChevronDown,
   RefreshCcw,
@@ -18,11 +24,15 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { roleHome } from "@/lib/roles";
+import { useBusniess } from "@/hooks/useBusniess";
+import InviteModal from "@/components/InviteModal";
 
 const DashboardNavbar = () => {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,8 +54,15 @@ const DashboardNavbar = () => {
     setIsOpen(false);
   }, [pathname]);
 
-  const isAdmin = session?.user?.role === "admin";
-  const isSuperAdmin = session?.user?.role === "super_admin";
+  const role = session?.user?.role;
+  const isSuperAdmin = role === "super_admin";
+  const isBusinessOwner = role === "busniess_owner";
+  const isTeamLeader = role === "team_leader";
+  const { companyName } = useBusniess();
+  // Owners see their own company on the brand, everyone else sees the product.
+  const brandName = isBusinessOwner ? companyName || "Your business" : "Daily Dashboard";
+  const brandInitial = brandName[0]?.toUpperCase() || "D";
+  const home = roleHome(role);
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
 
   const handleLogout = async () => {
@@ -55,38 +72,55 @@ const DashboardNavbar = () => {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  const menuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="size-4" /> },
-    { label: "Sound Store", href: "/sounds", icon: <Music2 className="size-4" /> },
-    { label: "Settings", href: "/settings", icon: <Settings className="size-4" /> },
+  // Business owners get their own links — none of the agent app.
+  const businessItems = [
+    { label: "Dashboard", href: "/busniess", icon: <LayoutDashboard className="size-4" /> },
+    { label: "Teams", href: "/busniess/teams", icon: <Users className="size-4" /> },
+    { label: "Invited users", href: "/busniess/invited_users", icon: <UserPlus className="size-4" /> },
+    { label: "Campaigns", href: "/busniess/campaigns", icon: <Megaphone className="size-4" /> },
+    { label: "Reports", href: "/busniess/reports", icon: <BarChart3 className="size-4" /> },
   ];
 
-  if (isAdmin) {
+  const agentItems = [
+    { label: "Dashboard", href: "/agent/dashboard", icon: <LayoutDashboard className="size-4" /> },
+    { label: "Leaderboard", href: "/agent/leaderboard", icon: <Trophy className="size-4" /> },
+    { label: "Property Search", href: "/agent/property-search", icon: <Home className="size-4" /> },
+    { label: "Sound Store", href: "/agent/sounds", icon: <Music2 className="size-4" /> },
+    { label: "Settings", href: "/agent/settings", icon: <Settings className="size-4" /> },
+  ];
+
+  // Team leaders read their team at /teamlead — they never log leads themselves.
+  const leaderItems = [
+    { label: "Dashboard", href: "/teamlead/dashboard", icon: <LayoutDashboard className="size-4" /> },
+    { label: "Intervals", href: "/teamlead/intervals", icon: <Timer className="size-4" /> },
+    { label: "Leaderboard", href: "/agent/leaderboard", icon: <Trophy className="size-4" /> },
+    { label: "Sound Store", href: "/agent/sounds", icon: <Music2 className="size-4" /> },
+    { label: "Settings", href: "/agent/settings", icon: <Settings className="size-4" /> },
+  ];
+
+  const menuItems = isBusinessOwner
+    ? [...businessItems]
+    : isTeamLeader
+      ? [...leaderItems]
+      : [...agentItems];
+
+  if (isSuperAdmin) {
     menuItems.push(
-      { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="size-4" /> },
-      { label: "Property Search", href: "/property-search", icon: <Home className="size-4" /> },
+      { label: "Admin", href: "/admin", icon: <ShieldAlert className="size-4" /> },
+      { label: "Admin Panel", href: "/admin/panel", icon: <ShieldCheck className="size-4" /> },
     );
   }
 
-  if (isSuperAdmin) {
-    menuItems.push({
-      label: "Super Admin",
-      href: "/super-admin",
-      icon: <ShieldAlert className="size-4" />,
-    });
-  }
-
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
     <header className="sticky top-0 z-100 w-full border-b bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-15 max-w-300 items-center gap-8 px-6">
-        <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+        <Link href={home} className="flex shrink-0 items-center gap-2">
           <div className="flex size-5.5 items-center justify-center rounded-md bg-foreground text-xs text-background">
-            D
+            {brandInitial}
           </div>
-          <span className="text-[15px] font-semibold tracking-tight">Daily Dashboard</span>
+          <span className="text-[15px] font-semibold tracking-tight">{brandName}</span>
         </Link>
 
         {/* Inline nav on desktop; the avatar menu carries the same links on small screens. */}
@@ -154,7 +188,31 @@ const DashboardNavbar = () => {
                     <div className="my-1.5 h-px bg-border" />
                   </div>
 
-                  {isAdmin && (
+                  {isBusinessOwner && (
+                    <>
+                      <Link
+                        href="/busniess/settings"
+                        onClick={() => setIsOpen(false)}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <Settings className="size-4" />
+                        <span>Settings</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          setInviteOpen(true);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <UserPlus className="size-4" />
+                        <span>Invite</span>
+                      </button>
+                      <div className="my-1.5 h-px bg-border" />
+                    </>
+                  )}
+
+                  {isSuperAdmin && (
                     <>
                       <button
                         onClick={async () => {
@@ -188,6 +246,8 @@ const DashboardNavbar = () => {
           </div>
         </div>
       </div>
+
+      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
     </header>
   );
 };

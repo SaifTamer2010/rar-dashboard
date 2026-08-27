@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { pusherServer } from "@/lib/pusher-server";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { sendTelegramToBusniess } from "@/lib/telegram";
 import Lead from "@/models/Lead";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
+import { getViewerTeamId } from "@/lib/team";
 import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
@@ -48,6 +49,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found. Please re-login." }, { status: 404 });
     }
 
+    // A lead can only be logged on a campaign that belongs to the user's own team.
+    const teamId = await getViewerTeamId(String(user._id));
+
+    if (!teamId) {
+      return NextResponse.json(
+        { error: "You are not on a team yet." },
+        { status: 403 },
+      );
+    }
+
+    const ownCampaign = await Campaign.findOne({ _id: campaignId, team_id: teamId });
+
+    if (!ownCampaign) {
+      return NextResponse.json(
+        { error: "That campaign is not on your team." },
+        { status: 403 },
+      );
+    }
+
     const lead = await Lead.create({
       userId: user._id,
       campaignId,
@@ -83,7 +103,8 @@ export async function POST(req: NextRequest) {
         .replace(/{campaign}/gi, campaignName);
     }
 
-    await sendTelegramMessage(message);
+    // Goes to the chat the user's own business configured, nowhere else.
+    await sendTelegramToBusniess(user.busniess_id, message);
 
     return NextResponse.json({ success: true, lead });
   } catch (error) {
