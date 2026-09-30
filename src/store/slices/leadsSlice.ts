@@ -11,8 +11,41 @@ interface LastLead {
   createdAt: string;
 }
 
+/**
+ * A `.populate("userId"|"campaignId", "name")` projection from GET /api/admin/leads
+ * and PUT /api/admin/leads/[id] — mongo returns `_id` alongside the projected field.
+ */
+interface PopulatedRef {
+  _id: string;
+  name: string;
+}
+
+/**
+ * A Lead as it reaches the browser. Mirrors ILead in src/models/Lead.ts after
+ * JSON serialisation: ObjectIds become strings and Dates become ISO strings.
+ * `userId`/`campaignId` arrive populated from the list and update routes, but raw
+ * (unpopulated ids) from POST /api/admin/leads, hence the union.
+ */
+export interface Lead {
+  _id: string;
+  userId: PopulatedRef | string;
+  campaignId: PopulatedRef | string;
+  createdAt: string;
+}
+
+/**
+ * Body accepted by POST /api/admin/leads and PUT /api/admin/leads/[id]; both
+ * destructure `{ userId, campaignId, createdAt }` and require the first two.
+ * The lead form sends a `Date` for `createdAt`, which JSON.stringify serialises.
+ */
+export interface LeadInput {
+  userId: string;
+  campaignId: string;
+  createdAt?: string | Date;
+}
+
 interface LeadsState {
-  list: any[];
+  list: Lead[];
   byUser: StatRow[];
   byCampaign: StatRow[];
   totalLeads: number;
@@ -76,7 +109,7 @@ export const fetchLeads = createAsyncThunk(
 
 export const addLead = createAsyncThunk(
   "leads/addLead",
-  async (leadData: any, { dispatch }) => {
+  async (leadData: LeadInput, { dispatch }) => {
     const res = await fetch("/api/admin/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,7 +125,7 @@ export const addLead = createAsyncThunk(
 
 export const updateLead = createAsyncThunk(
   "leads/updateLead",
-  async ({ id, data }: { id: string; data: any }, { dispatch }) => {
+  async ({ id, data }: { id: string; data: LeadInput }, { dispatch }) => {
     const res = await fetch(`/api/admin/leads/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

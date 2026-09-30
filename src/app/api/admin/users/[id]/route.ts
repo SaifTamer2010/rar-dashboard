@@ -3,6 +3,9 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { isRole } from "@/lib/roles";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function PUT(
   req: NextRequest,
@@ -10,7 +13,7 @@ export async function PUT(
 ) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -19,8 +22,8 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
     const { password } = body;
-    const updateFields: any = {};
-    const allowedFields = ["name", "role", "isActive","telegramUsername", "soundUrl"];
+    const updateFields: Record<string, unknown> = {};
+    const allowedFields = ["name", "email", "role", "isActive","telegramUsername", "soundUrl"];
     
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {
@@ -28,11 +31,34 @@ export async function PUT(
       }
     });
 
+    if (updateFields.role !== undefined && !isRole(updateFields.role)) {
+      return NextResponse.json({ message: "Unknown role" }, { status: 400 });
+    }
+
+    // Email is the identity key. Normalize it the way the schema does, then
+    // reject a collision here rather than letting the unique index throw a
+    // duplicate-key error that surfaces as a bare 500.
+    if (updateFields.email !== undefined) {
+      const normalizedEmail = String(updateFields.email).trim().toLowerCase();
+
+      if (!EMAIL_RE.test(normalizedEmail)) {
+        return NextResponse.json({ message: "Enter a valid email" }, { status: 400 });
+      }
+
+      const taken = await User.findOne({ email: normalizedEmail, _id: { $ne: id } });
+      if (taken) {
+        return NextResponse.json({ message: "That email is already taken" }, { status: 409 });
+      }
+
+      updateFields.email = normalizedEmail;
+    }
+
     if (password) {
       updateFields.password = await bcrypt.hash(password, 10);
     }
     const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
       new: true,
+      runValidators: true,
     }).select("-password"); // Exclude password from the returned object
 
     if (!updatedUser) {
@@ -57,7 +83,7 @@ export async function DELETE(
 ) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -74,10 +100,12 @@ export async function DELETE(
       { message: "User deleted successfully" },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
+    // Log the detail, return a generic message — internal error text is not
+    // something to hand back over the wire.
     console.error("Error deleting user:", error);
     return NextResponse.json(
-      { message: "Error deleting user", details: error.message },
+      { message: "Error deleting user" },
       { status: 500 }
     );
   }

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import toast from "react-hot-toast";
 import RoleGate from "@/components/RoleGate";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
+import ChatIdFinder from "@/components/ChatIdFinder";
 
 type TeamRow = {
   id: string;
@@ -11,10 +13,11 @@ type TeamRow = {
   members: number;
   leads: number;
   campaigns: number;
+  telegramChatId: string;
 };
 
 type TeamDetail = {
-  team: { id: string; name: string };
+  team: { id: string; name: string; telegramChatId: string };
   totalLeads: number;
   members: { id: string; name: string; email: string; leads: number }[];
   campaigns: { id: string; name: string; leads: number }[];
@@ -34,6 +37,7 @@ export default function TeamsPage() {
 
 function Body() {
   const [teams, setTeams] = useState<TeamRow[]>([]);
+  const [botTokenSet, setBotTokenSet] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
   const [newTeamName, setNewTeamName] = useState("");
@@ -45,11 +49,12 @@ function Body() {
     let cancelled = false;
 
     (async () => {
-      const res = await fetch("/api/busniess/teams");
-      const rows = res.ok ? (await res.json()).teams : [];
+      const res = await fetch("/api/business/teams");
+      const body = res.ok ? await res.json() : null;
       if (cancelled) return;
 
-      setTeams(rows);
+      setTeams(body?.teams ?? []);
+      setBotTokenSet(!!body?.telegramBotTokenSet);
       setLoading(false);
     })();
 
@@ -61,7 +66,7 @@ function Body() {
   async function createTeam() {
     if (!newTeamName.trim()) return;
 
-    const res = await fetch("/api/busniess/teams", {
+    const res = await fetch("/api/business/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newTeamName.trim() }),
@@ -107,7 +112,20 @@ function Body() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <SkeletonRegion
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            label="Loading teams"
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-lg border bg-background p-4">
+                <Skeleton className="h-3.5 w-28" />
+                <div className="mt-3 flex gap-4">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </SkeletonRegion>
         ) : teams.length === 0 ? (
           <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
             No teams yet. Make one above, or create one while assigning an invited user.
@@ -120,7 +138,14 @@ function Body() {
                 onClick={() => setOpenTeamId(team.id)}
                 className="cursor-pointer rounded-lg border bg-background p-4 text-left transition-colors hover:bg-muted"
               >
-                <div className="text-sm font-medium">{team.name || "Untitled team"}</div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-sm font-medium">{team.name || "Untitled team"}</div>
+                  {!team.telegramChatId && (
+                    <span className="shrink-0 rounded-full border border-amber-600/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                      No chat
+                    </span>
+                  )}
+                </div>
                 <div className="mt-3 flex gap-4 text-[13px] text-muted-foreground">
                   <span>
                     <span className="font-medium text-foreground">{team.members}</span> members
@@ -141,6 +166,7 @@ function Body() {
       {openTeamId && (
         <TeamModal
           teamId={openTeamId}
+          botTokenSet={botTokenSet}
           onClose={() => {
             setOpenTeamId(null);
             reload();
@@ -151,9 +177,20 @@ function Body() {
   );
 }
 
-function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void }) {
+function TeamModal({
+  teamId,
+  botTokenSet,
+  onClose,
+}: {
+  teamId: string;
+  botTokenSet: boolean;
+  onClose: () => void;
+}) {
   const [data, setData] = useState<TeamDetail | null>(null);
   const [pickedCampaign, setPickedCampaign] = useState("");
+  const [chatId, setChatId] = useState("");
+  const [savingChat, setSavingChat] = useState(false);
+  const [testingChat, setTestingChat] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
@@ -164,11 +201,12 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
     let cancelled = false;
 
     (async () => {
-      const res = await fetch(`/api/busniess/teams/${teamId}`);
+      const res = await fetch(`/api/business/teams/${teamId}`);
       const detail = res.ok ? await res.json() : null;
       if (cancelled || !detail) return;
 
       setData(detail);
+      setChatId(detail.team.telegramChatId ?? "");
     })();
 
     return () => {
@@ -182,6 +220,47 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  async function saveChatId() {
+    setSavingChat(true);
+
+    const res = await fetch(`/api/business/teams/${teamId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telegramChatId: chatId }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    setSavingChat(false);
+
+    if (!res.ok) {
+      toast.error(body.message || "Could not save the chat id");
+      return;
+    }
+
+    toast.success(chatId.trim() ? "Chat id saved" : "Chat id cleared");
+    reload();
+  }
+
+  async function sendTestToTeam() {
+    setTestingChat(true);
+
+    const res = await fetch("/api/telegram/send-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamId, message: "Test message from your dashboard." }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    setTestingChat(false);
+
+    if (!res.ok) {
+      toast.error(body.error || "Could not send");
+      return;
+    }
+
+    toast.success("Test sent to this team's chat");
+  }
+
   async function assignCampaign() {
     if (!pickedCampaign && !newCampaignName.trim()) {
       toast.error("Pick a campaign or name a new one");
@@ -189,7 +268,7 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
     }
 
     setBusy(true);
-    const res = await fetch(`/api/busniess/teams/${teamId}/campaigns`, {
+    const res = await fetch(`/api/business/teams/${teamId}/campaigns`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
@@ -214,7 +293,7 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
   async function removeCampaign(campaignId: string) {
     setBusy(true);
     const res = await fetch(
-      `/api/busniess/teams/${teamId}/campaigns?campaignId=${campaignId}`,
+      `/api/business/teams/${teamId}/campaigns?campaignId=${campaignId}`,
       { method: "DELETE" },
     );
     setBusy(false);
@@ -244,9 +323,13 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
             <h2 className="text-[15px] font-semibold tracking-tight">
               {data?.team.name || "Team"}
             </h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              {data ? `${data.members.length} members · ${data.totalLeads} leads` : "Loading…"}
-            </p>
+            {data ? (
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {`${data.members.length} members · ${data.totalLeads} leads`}
+              </p>
+            ) : (
+              <Skeleton className="mt-1.5 h-3 w-36" />
+            )}
           </div>
           <button
             onClick={onClose}
@@ -257,8 +340,74 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
           </button>
         </div>
 
+        {!data && (
+          <SkeletonRegion className="flex flex-col gap-6" label="Loading team">
+            {Array.from({ length: 2 }).map((_, s) => (
+              <section key={s}>
+                <Skeleton className="mb-2 h-3 w-20" />
+                <div className="divide-y overflow-hidden rounded-lg border">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2">
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-3.5 w-28" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                      <Skeleton className="h-3 w-14" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </SkeletonRegion>
+        )}
+
         {data && (
           <div className="flex flex-col gap-6">
+            {/* Telegram chat for this team */}
+            <section>
+              <h3 className="mb-2 text-[13px] font-medium">Telegram chat</h3>
+              <div className="rounded-lg border p-3">
+                <p className="text-[13px] text-muted-foreground">
+                  Leads logged by this team are announced here. Add your bot to the group, send any
+                  message there, then use Find my chat ID — group ids start with a minus.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    aria-label="Telegram chat id"
+                    placeholder="-1001234567890"
+                    value={chatId}
+                    onChange={(e) => setChatId(e.target.value)}
+                    className={fieldClass}
+                  />
+                  <ChatIdFinder disabled={!botTokenSet} onPick={setChatId} />
+                  <button
+                    onClick={saveChatId}
+                    disabled={savingChat || chatId === (data.team.telegramChatId ?? "")}
+                    className="shrink-0 cursor-pointer rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {savingChat ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={sendTestToTeam}
+                    disabled={testingChat || !data.team.telegramChatId}
+                    title={
+                      data.team.telegramChatId
+                        ? "Send a test message to this chat"
+                        : "Save a chat id first"
+                    }
+                    className="shrink-0 cursor-pointer rounded-lg border bg-background px-3.5 py-2 text-[13px] font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {testingChat ? "Sending…" : "Test"}
+                  </button>
+                </div>
+                {!data.team.telegramChatId && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                    Not set — this team&apos;s leads fall back to the business-wide chat.
+                  </p>
+                )}
+              </div>
+            </section>
+
             {/* Who logged what */}
             <section>
               <h3 className="mb-2 text-[13px] font-medium">Members</h3>
@@ -357,3 +506,9 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
     </div>
   );
 }
+
+/**
+ * Telegram never shows a chat id anywhere in its own app, so nobody can look
+ * one up by hand. The bot can: it sees the chat behind every message sent to
+ * it, and this lists them so the owner picks instead of types.
+ */

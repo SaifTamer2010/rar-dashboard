@@ -1,24 +1,24 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Invite from "@/models/Invite";
-import { getOwnerBusniess } from "@/lib/busniess";
+import { getOwnerBusiness } from "@/lib/business";
 
 /** The owner's standing invite link. Created on first ask, reused after. */
 export async function GET() {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {
     await connectToDatabase();
 
-    let invite = await Invite.findOne({ busniess_id: busniess._id });
+    let invite = await Invite.findOne({ busniess_id: business._id, team_id: null });
 
     if (!invite) {
       invite = await Invite.create({
-        busniess_id: busniess._id,
+        busniess_id: business._id,
         token: crypto.randomUUID(),
       });
     }

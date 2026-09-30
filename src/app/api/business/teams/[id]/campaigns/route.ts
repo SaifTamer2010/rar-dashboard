@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Team from "@/models/Team";
 import Campaign from "@/models/Campaign";
-import { getOwnerBusniess } from "@/lib/busniess";
+import { getOwnerBusiness } from "@/lib/business";
 
 /** Hand a campaign to this team. Moves it if another team had it. */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,7 +21,7 @@ export async function POST(
 
     await connectToDatabase();
 
-    const team = await Team.findOne({ _id: id, busniess_id: busniess._id });
+    const team = await Team.findOne({ _id: id, busniess_id: business._id });
     if (!team) {
       return NextResponse.json({ message: "Team not found" }, { status: 404 });
     }
@@ -29,7 +29,7 @@ export async function POST(
     if (newCampaignName?.trim()) {
       const created = await Campaign.create({
         name: newCampaignName.trim(),
-        busniess_id: busniess._id,
+        busniess_id: business._id,
         team_id: team._id,
       });
       return NextResponse.json({ id: String(created._id), name: created.name });
@@ -37,7 +37,7 @@ export async function POST(
 
     const campaign = await Campaign.findOne({
       _id: campaignId,
-      busniess_id: busniess._id,
+      busniess_id: business._id,
     });
 
     if (!campaign) {
@@ -59,9 +59,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -73,7 +73,7 @@ export async function DELETE(
 
     const campaign = await Campaign.findOne({
       _id: campaignId,
-      busniess_id: busniess._id,
+      busniess_id: business._id,
       team_id: id,
     });
 

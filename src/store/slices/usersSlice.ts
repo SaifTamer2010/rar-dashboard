@@ -1,5 +1,36 @@
-import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { IUser } from "@/models/User";
+
+/**
+ * Body accepted by POST /api/admin/users. The route destructures exactly these
+ * seven fields (name + email + password required) and defaults the rest. Email
+ * is the identity key — the route lowercases and de-dupes it.
+ */
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  password: string;
+  role?: IUser["role"];
+  telegramUsername?: string | null;
+  soundUrl?: string | null;
+  isActive?: boolean;
+}
+
+/**
+ * Body accepted by PUT /api/admin/users/[id]. That route only copies across its
+ * `allowedFields` whitelist — name, email, role, isActive, telegramUsername,
+ * soundUrl — plus an optional `password` it re-hashes. Everything is optional
+ * (partial update).
+ */
+export interface UpdateUserInput {
+  name?: string;
+  email?: string;
+  role?: IUser["role"];
+  isActive?: boolean;
+  telegramUsername?: string | null;
+  soundUrl?: string | null;
+  password?: string;
+}
 
 interface UsersState {
   list: IUser[];
@@ -25,7 +56,7 @@ export const fetchUsers = createAsyncThunk(
 
 export const addUser = createAsyncThunk(
   "users/addUser",
-  async (userData: any) => {
+  async (userData: CreateUserInput) => {
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,7 +70,7 @@ export const addUser = createAsyncThunk(
 
 export const updateUser = createAsyncThunk(
   "users/updateUser",
-  async ({ id, data }: { id: string; data: any }) => {
+  async ({ id, data }: { id: string; data: UpdateUserInput }) => {
     const res = await fetch(`/api/admin/users/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

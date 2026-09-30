@@ -32,7 +32,7 @@ export function formatDashboardMessage(
     campaignId: { name: string };
     createdAt: string;
   } | null,
-  sentBy: String,
+  sentBy: string,
 ): string {
   const userLines = byUser
     .map((r) => `${toEmojiNumber(r.count)} ${r.name}`)

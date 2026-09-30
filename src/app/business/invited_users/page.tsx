@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import RoleGate from "@/components/RoleGate";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
 type Member = {
   id: string;
@@ -48,8 +49,8 @@ function Body() {
 
     (async () => {
       const [usersRes, teamsRes] = await Promise.all([
-        fetch("/api/busniess/users"),
-        fetch("/api/busniess/teams"),
+        fetch("/api/business/users"),
+        fetch("/api/business/teams"),
       ]);
 
       const users = usersRes.ok ? (await usersRes.json()).users : [];
@@ -79,7 +80,21 @@ function Body() {
 
         <div className="overflow-hidden rounded-lg border bg-background">
           {loading ? (
-            <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+            <SkeletonRegion className="divide-y" label="Loading invited users">
+              <div className="grid grid-cols-4 gap-4 border-b bg-muted/50 px-4 py-2.5">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-3 w-16" />
+                ))}
+              </div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-4 items-center gap-4 px-4 py-3">
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+              ))}
+            </SkeletonRegion>
           ) : members.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">
               Nobody has joined yet. Share your invite link from the menu up top.
@@ -172,7 +187,7 @@ function AssignModal({
 
     setSaving(true);
 
-    const res = await fetch(`/api/busniess/users/${member.id}/assign`, {
+    const res = await fetch(`/api/business/users/${member.id}/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
@@ -195,7 +210,7 @@ function AssignModal({
 
   async function unassign() {
     setSaving(true);
-    const res = await fetch(`/api/busniess/users/${member.id}/assign`, { method: "DELETE" });
+    const res = await fetch(`/api/business/users/${member.id}/assign`, { method: "DELETE" });
     setSaving(false);
 
     if (!res.ok) {

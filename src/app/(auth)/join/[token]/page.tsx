@@ -5,6 +5,7 @@ import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { roleHome } from "@/lib/roles";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /** Shared input styling — there is no Input in components/ui yet. */
 const fieldClass =
@@ -12,6 +13,9 @@ const fieldClass =
 
 const submitClass =
   "w-full cursor-pointer rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50";
+
+/** Email is the account identity now, so it is worth catching typos here. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function JoinPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -44,6 +48,10 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
       setError("Fill in every field.");
       return;
     }
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -54,7 +62,7 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
 
     const res = await fetch("/api/auth/join", {
       method: "POST",
-      body: JSON.stringify({ token, name, email, password }),
+      body: JSON.stringify({ token, name, email: email.trim(), password }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -66,7 +74,11 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
       return;
     }
 
-    const signInRes = await signIn("credentials", { email, password, redirect: false });
+    const signInRes = await signIn("credentials", {
+      email: email.trim(),
+      password,
+      redirect: false,
+    });
 
     if (signInRes?.error) {
       setLoading(false);
@@ -74,11 +86,8 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
       return;
     }
 
-    await fetch("/api/auth/set-refresh-token", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-      headers: { "content-Type": "application/json" },
-    });
+    // Identity comes from the session cookie now, not a body we could spoof.
+    await fetch("/api/auth/set-refresh-token", { method: "POST" });
 
     const fresh = await getSession();
     setLoading(false);
@@ -137,9 +146,15 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
           ) : (
             <>
               <div className="flex flex-col gap-1.5">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Join {companyName || "the team"}
-                </h1>
+                {companyName === null ? (
+                  // Skeleton, not a "the team" placeholder — the heading would
+                  // otherwise visibly swap names once the invite resolves.
+                  <Skeleton className="h-8 w-56" />
+                ) : (
+                  <h1 className="text-2xl font-semibold tracking-tight">
+                    Join {companyName}
+                  </h1>
+                )}
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   You were invited. Set up your account to start logging leads.
                 </p>
@@ -153,6 +168,7 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
                   <input
                     id="name"
                     type="text"
+                    autoComplete="name"
                     autoFocus
                     placeholder="Dana Whitfield"
                     value={name}
@@ -168,6 +184,8 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
                   <input
                     id="email"
                     type="email"
+                    autoComplete="email"
+                    inputMode="email"
                     placeholder="dana@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -182,6 +200,7 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
                   <input
                     id="password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

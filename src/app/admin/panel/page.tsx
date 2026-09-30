@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import RoleGate from "@/components/RoleGate";
+
+import React, { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,14 +14,9 @@ const AdminPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "users");
-
-  useEffect(() => {
-    const tab = searchParams.get("tab") || "users";
-    if (activeTab !== tab) {
-      setActiveTab(tab);
-    }
-  }, [searchParams, activeTab]);
+  // The URL is the source of truth — mirroring it into state through an effect
+  // meant an extra render on every navigation and two places to keep in sync.
+  const activeTab = searchParams.get("tab") || "users";
 
   useEffect(() => {
     if (status === "unauthenticated" || (status === "authenticated" && session?.user?.role !== "super_admin")) {
@@ -46,8 +43,8 @@ const AdminPageContent = () => {
   }
 
   const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-    router.push(`/admin?tab=${tabId}`, { scroll: false });
+    // Was `/admin?tab=` — which navigated off this page entirely on every click.
+    router.push(`/admin/panel?tab=${tabId}`, { scroll: false });
   };
 
   return (
@@ -101,7 +98,7 @@ const AdminPageContent = () => {
   );
 };
 
-export default function AdminPage() {
+function AdminPage() {
   return (
     <Suspense
       fallback={
@@ -112,5 +109,13 @@ export default function AdminPage() {
     >
       <AdminPageContent />
     </Suspense>
+  );
+}
+
+export default function GuardedAdminPage() {
+  return (
+    <RoleGate role="super_admin">
+      <AdminPage />
+    </RoleGate>
   );
 }

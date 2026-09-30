@@ -1,5 +1,7 @@
 "use client";
 
+import RoleGate from "@/components/RoleGate";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import CampaignModal from "@/components/CampaignModal";
 import Celebration from "@/components/Celebration";
@@ -10,10 +12,12 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchLeadsStats } from "@/store/slices/leadsSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import FeatureUpdateModal from "@/components/FeatureUpdateModal";
+import type { ChangelogEntry } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { roleHome } from "@/lib/roles";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
 /** Matches the sign-in page fields so both surfaces read as one system. */
 const fieldClass =
@@ -24,7 +28,7 @@ const secondaryButton =
 
 const cardClass = "rounded-xl border bg-background";
 
-export default function DashboardPage() {
+function DashboardPage() {
   const dispatch = useAppDispatch();
   const byUser = useAppSelector((state) => state.leads.byUser);
   const byCampaign = useAppSelector((state) => state.leads.byCampaign);
@@ -42,10 +46,16 @@ export default function DashboardPage() {
   const [sending, setSending] = useState(false);
   const [shameActive, setShameActive] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateEntries, setUpdateEntries] = useState<ChangelogEntry[]>([]);
+  // Named by the server; null until it answers, and for anyone on no team.
+  const [leadsChannelName, setLeadsChannelName] = useState<string | null>(null);
 
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
-  const isViewer = session?.user?.role === "viewer";
+  // Was `role === "viewer"`, a role that does not exist in the schema, so this
+  // was always false and the button always showed. Agents are who log leads;
+  // a super admin on this page is peeking.
+  const canLogLead = session?.user?.role === "agent";
   // Agents own this page; super admins may peek. Leaders and owners have their own.
   const isAgentSurface =
     !session || ["agent", "super_admin"].includes(session.user?.role ?? "");
@@ -115,6 +125,7 @@ export default function DashboardPage() {
       .then(res => res.json())
       .then(data => {
         if (data.showModal) {
+          setUpdateEntries(data.entries ?? []);
           setShowUpdateModal(true);
         }
       })
@@ -122,12 +133,40 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Initial fetch handled by dateRange effect
+    let cancelled = false;
 
-    const channel = pusherClient.subscribe("leads-channel");
-    channel.bind("force-refresh", () => {
-      window.location.reload();
+    fetch("/api/leads/channel")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setLeadsChannelName(data?.channel ?? null);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Lead traffic rides the viewer's own team channel — the shared one used to
+  // toast every business's leads at everyone.
+  useEffect(() => {
+    if (!leadsChannelName) return;
+
+    const channel = pusherClient.subscribe(leadsChannelName);
+
+    // A private channel that fails to authorize goes quiet with no error of its
+    // own — the board simply stops updating and nobody notices for a day. This
+    // is the only place that failure is visible, so it says so out loud.
+    channel.bind("pusher:subscription_error", (err: { status?: number }) => {
+      console.error(
+        `pusher: subscription to ${leadsChannelName} refused (status ${err?.status ?? "unknown"}). ` +
+          "Live leads will not appear. Check /api/pusher/auth and the PUSHER_SECRET env var.",
+      );
+      toast.error("Live updates are offline — refresh to see new leads.", {
+        id: "pusher-offline",
+      });
     });
+
     channel.bind(
       "lead-added",
       async (payload: { userName: string; userId: string; campaignName?: string }) => {
@@ -144,9 +183,11 @@ export default function DashboardPage() {
         let soundUrl = soundCacheRef.current[payload.userId];
 
         if (!soundUrl) {
+          // The sounds route 403s across businesses; without this check the
+          // error body got cached and then handed to `new Audio()`.
           const res = await fetch(`/api/sounds/${payload.userId}`);
-          const data = await res.json();
-          if (data.soundUrl) {
+          const data = res.ok ? await res.json().catch(() => null) : null;
+          if (data?.soundUrl) {
             soundUrl = data.soundUrl;
             soundCacheRef.current[payload.userId] = soundUrl;
           }
@@ -188,9 +229,28 @@ export default function DashboardPage() {
     });
 
     return () => {
+      pusherClient.unsubscribe(leadsChannelName);
+    };
+  }, [
+    leadsChannelName,
+    fetchStats,
+    lastLead?.userId?.name,
+    dateRange.start,
+    dateRange.end,
+  ]);
+
+  useEffect(() => {
+    // Still the shared channel: /api/admin/force-refresh is the last producer
+    // that isn't scoped, and a super admin's refresh is meant to hit everyone.
+    const channel = pusherClient.subscribe("leads-channel");
+    channel.bind("force-refresh", () => {
+      window.location.reload();
+    });
+
+    return () => {
       pusherClient.unsubscribe("leads-channel");
     };
-  }, [fetchStats, lastLead?.userId?.name, dateRange.start, dateRange.end]);
+  }, []);
 
   function handleCopy() {
     const message = formatDashboardMessage(
@@ -245,7 +305,7 @@ export default function DashboardPage() {
             <h1 className="text-[26px] font-semibold tracking-tight">Lead activity</h1>
             <p className="text-sm text-muted-foreground">{rangeLabel}</p>
           </div>
-          {!isViewer && (
+          {canLogLead && (
             <button
               onClick={() => setModalOpen(true)}
               className="h-10 cursor-pointer rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
@@ -387,11 +447,18 @@ export default function DashboardPage() {
               </AnimatePresence>
 
               {loading && byUser.length === 0 && (
-                <div className="flex animate-pulse flex-col">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-16 border-b bg-muted/40 last:border-b-0" />
+                <SkeletonRegion className="flex flex-col" label="Loading the board">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-4 border-b px-5 py-4 last:border-b-0"
+                    >
+                      <Skeleton className="size-8 shrink-0 rounded-lg" />
+                      <Skeleton className="h-3.5 w-36" />
+                      <Skeleton className="ml-auto h-4 w-10" />
+                    </div>
                   ))}
-                </div>
+                </SkeletonRegion>
               )}
 
               {!loading && byUser.length === 0 && (
@@ -492,14 +559,20 @@ export default function DashboardPage() {
         onSuccess={handleLeadSuccess}
       />
       <Celebration trigger={celebrate} />
-      <AnimatePresence>
-        {showUpdateModal && (
-          <FeatureUpdateModal
-            isOpen={showUpdateModal}
-            onClose={handleCloseUpdateModal}
-          />
-        )}
-      </AnimatePresence>
+      {/* Stays mounted — the dialog runs its own enter/exit animation off isOpen. */}
+      <FeatureUpdateModal
+        isOpen={showUpdateModal}
+        onClose={handleCloseUpdateModal}
+        entries={updateEntries}
+      />
     </div>
+  );
+}
+
+export default function GuardedDashboardPage() {
+  return (
+    <RoleGate role="agent">
+      <DashboardPage />
+    </RoleGate>
   );
 }

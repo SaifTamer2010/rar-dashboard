@@ -8,12 +8,16 @@ import { fetchUsers } from "@/store/slices/usersSlice";
 import { fetchCampaigns } from "@/store/slices/campaignsSlice";
 import toast from "react-hot-toast";
 import { Pencil, Trash2, Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
+import type { Lead, LeadInput } from "@/store/slices/leadsSlice";
+import type { IUser } from "@/models/User";
+import type { Campaign } from "@/store/slices/campaignsSlice";
 
 interface LeadFormProps {
-  initialData?: any;
-  users: any[];
-  campaigns: any[];
-  onSubmit: (data: any) => void;
+  initialData?: Lead;
+  users: IUser[];
+  campaigns: Campaign[];
+  onSubmit: (data: LeadInput) => void;
   onCancel: () => void;
   isEdit?: boolean;
 }
@@ -36,8 +40,8 @@ const LeadForm: React.FC<LeadFormProps> = ({
   onCancel,
   isEdit = false,
 }) => {
-  const [userId, setUserId] = useState(initialData?.userId?._id || initialData?.userId || "");
-  const [campaignId, setCampaignId] = useState(initialData?.campaignId?._id || initialData?.campaignId || "");
+  const [userId, setUserId] = useState(refId(initialData?.userId));
+  const [campaignId, setCampaignId] = useState(refId(initialData?.campaignId));
   const [createdAt, setCreatedAt] = useState(
     initialData?.createdAt ? new Date(initialData.createdAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
   );
@@ -137,14 +141,24 @@ const LeadForm: React.FC<LeadFormProps> = ({
   );
 };
 
+/** A ref is populated ({_id, name}) on list/update but a bare id on create. */
+function refName(ref: Lead["userId"] | Lead["campaignId"]) {
+  return typeof ref === "string" ? "Unknown" : ref?.name || "Unknown";
+}
+
+function refId(ref: Lead["userId"] | Lead["campaignId"] | undefined) {
+  if (!ref) return "";
+  return typeof ref === "string" ? ref : ref._id;
+}
+
 const LeadManagement: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { list: leads, status, error, pagination } = useAppSelector((state) => state.leads);
+  const { list: leads, status, pagination } = useAppSelector((state) => state.leads);
   const { list: users } = useAppSelector((state) => state.users);
   const { list: campaigns } = useAppSelector((state) => state.campaigns);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingLead, setEditingLead] = useState<any | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   useEffect(() => {
     dispatch(fetchLeads(pagination.page));
@@ -156,7 +170,7 @@ const LeadManagement: React.FC = () => {
     dispatch(fetchLeads(newPage));
   };
 
-  const handleAddLead = async (leadData: any) => {
+  const handleAddLead = async (leadData: LeadInput) => {
     const promise = dispatch(addLead(leadData)).unwrap();
 
     toast.promise(promise, {
@@ -168,10 +182,10 @@ const LeadManagement: React.FC = () => {
     try {
       await promise;
       setShowAddForm(false);
-    } catch (err) {}
+    } catch {}
   };
 
-  const handleEditLead = async (leadData: any) => {
+  const handleEditLead = async (leadData: LeadInput) => {
     if (!editingLead) return;
     const promise = dispatch(updateLead({ id: editingLead._id.toString(), data: leadData })).unwrap();
 
@@ -184,7 +198,7 @@ const LeadManagement: React.FC = () => {
     try {
       await promise;
       setEditingLead(null);
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDeleteLead = async (leadId: string) => {
@@ -201,9 +215,26 @@ const LeadManagement: React.FC = () => {
 
   if (status === "loading" && leads.length === 0) {
     return (
-      <div className="rounded-xl border bg-background px-4 py-16 text-center text-sm text-muted-foreground">
-        Loading leads…
-      </div>
+      <SkeletonRegion
+        className="divide-y overflow-hidden rounded-xl border bg-background"
+        label="Loading leads"
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <Skeleton className="size-8 shrink-0 rounded-lg" />
+              <div className="min-w-0 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-7 w-16 rounded-lg" />
+              <Skeleton className="h-7 w-16 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </SkeletonRegion>
     );
   }
 
@@ -236,7 +267,7 @@ const LeadManagement: React.FC = () => {
                   setShowAddForm(false);
                   setEditingLead(null);
                 }}
-                initialData={editingLead || {}}
+                initialData={editingLead ?? undefined}
                 isEdit={!!editingLead}
               />
             </div>
@@ -265,11 +296,11 @@ const LeadManagement: React.FC = () => {
                 className="grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50 sm:grid-cols-[1.2fr_1.2fr_1fr_auto]"
               >
                 <p className="truncate text-sm font-medium">
-                  {(lead.userId as any)?.name || "Unknown"}
+                  {refName(lead.userId)}
                 </p>
                 <div className="hidden sm:block">
                   <span className="inline-block max-w-full truncate rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    {(lead.campaignId as any)?.name || "Unknown"}
+                    {refName(lead.campaignId)}
                   </span>
                 </div>
                 <p className="hidden text-sm text-muted-foreground sm:block">

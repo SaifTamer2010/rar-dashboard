@@ -6,7 +6,6 @@ import RoleGate from "@/components/RoleGate";
 
 const links = [
   { label: "Admin Panel", href: "/admin/panel", description: "The existing users / campaigns / leads panel." },
-  { label: "Bot", href: "/admin/bot", description: "Telegram bot wiring." },
   { label: "Agent App", href: "/agent", description: "See what agents see." },
 ];
 
@@ -30,7 +29,7 @@ function Body() {
           </span>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight">Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Signed in as {session?.user?.name}. SUBAdmin
+            Signed in as {session?.user?.name}. Full access to users, campaigns and leads.
           </p>
         </div>
 

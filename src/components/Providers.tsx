@@ -2,11 +2,12 @@
 
 import { Provider } from "react-redux";
 import { store } from "@/store";
-import { SessionProvider, useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { SessionProvider, useSession, signOut } from "next-auth/react";
+import { useEffect, useRef } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { setUser, clearUser } from "@/store/slices/authSlice";
 import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 function SessionSync() {
   const { data: session } = useSession();
@@ -16,10 +17,9 @@ function SessionSync() {
     if (session?.user) {
       dispatch(
         setUser({
-          id: (session.user as any).id || "",
+          id: session.user.id || "",
           name: session.user.name || "",
-          role: (session.user as any).role || "user",
-          soundUrl: (session.user as any).soundUrl,
+          role: session.user.role,
         })
       );
     } else {
@@ -30,11 +30,33 @@ function SessionSync() {
   return null;
 }
 
+/**
+ * The jwt callback sets `session.error` when a refresh token can no longer be
+ * rotated. Nothing read it before, so an expired session just sat there making
+ * every request 401 with no explanation. Now it signs the user out once, with
+ * a reason, and sends them to the sign-in screen.
+ */
+function SessionExpiryWatcher() {
+  const { data: session } = useSession();
+  const handled = useRef(false);
+
+  useEffect(() => {
+    if (session?.error !== "RefreshTokenExpired" || handled.current) return;
+
+    handled.current = true;
+    toast.error("Your session expired. Please sign in again.");
+    signOut({ callbackUrl: "/sign-in" });
+  }, [session?.error]);
+
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <Provider store={store}>
         <SessionSync />
+        <SessionExpiryWatcher />
         {children}
         <Toaster
           position="bottom-left"

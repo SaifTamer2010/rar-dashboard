@@ -4,13 +4,13 @@ import User from "@/models/User";
 import AgentProfile from "@/models/agentProfile";
 import TeamLeaderProfile from "@/models/TeamLeaderProfile";
 import Team from "@/models/Team";
-import { getOwnerBusniess } from "@/lib/busniess";
+import { getOwnerBusiness } from "@/lib/business";
 
 /** Everyone who joined the business, with the team they landed in (or none). */
 export async function GET() {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,7 +18,7 @@ export async function GET() {
     await connectToDatabase();
 
     const users = await User.find(
-      { busniess_id: busniess._id },
+      { busniess_id: business._id },
       "name email role createdAt",
     ).sort({ createdAt: -1 });
 
@@ -30,7 +30,7 @@ export async function GET() {
       ...(await TeamLeaderProfile.find({ user_id: { $in: userIds } })),
     ];
 
-    const teams = await Team.find({ busniess_id: busniess._id }, "name");
+    const teams = await Team.find({ busniess_id: business._id }, "name");
     const teamName = new Map(teams.map((t) => [String(t._id), t.name]));
     const teamOf = new Map(
       profiles.map((p) => [String(p.user_id), String(p.team_id)]),
@@ -51,7 +51,7 @@ export async function GET() {
       }),
     });
   } catch (error) {
-    console.error("busniess users error:", error);
+    console.error("business users error:", error);
     return NextResponse.json({ message: "Error fetching users" }, { status: 500 });
   }
 }

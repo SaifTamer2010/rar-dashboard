@@ -4,21 +4,18 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
 /** Company name for the signed-in business owner. Null while loading or n/a. */
-export function useBusniess() {
+export function useBusiness() {
   const { data: session } = useSession();
   const [companyName, setCompanyName] = useState<string | null>(null);
 
   const isOwner = session?.user?.role === "busniess_owner";
 
   useEffect(() => {
-    if (!isOwner) {
-      setCompanyName(null);
-      return;
-    }
+    if (!isOwner) return;
 
     let cancelled = false;
 
-    fetch("/api/busniess")
+    fetch("/api/business")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data?.companyName) setCompanyName(data.companyName);
@@ -30,5 +27,7 @@ export function useBusniess() {
     };
   }, [isOwner]);
 
-  return { companyName };
+  // Derived rather than cleared through setState, so a role change does not
+  // cost an extra render pass.
+  return { companyName: isOwner ? companyName : null };
 }

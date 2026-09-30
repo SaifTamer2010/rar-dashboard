@@ -1,75 +1,83 @@
 import NextAuth from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User as AuthUser } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongodb";
 import User from "@/models/User";
 import Token from "@/models/Token";
+import { isRole, type Role } from "@/lib/roles";
+import { rateLimit, LIMITS } from "@/lib/rate-limit";
+
+/** How long a JWT is trusted before we re-check the refresh token in Mongo. */
+const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
+
+/** How long a refresh token stays valid. Matches the session maxAge. */
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const authOptions = {
   trustHost: true,
-  session: { 
+  session: {
     strategy: "jwt" as const,
-    maxAge: 60 * 60 * 24 * 7, // 1 min
+    maxAge: REFRESH_TOKEN_TTL_MS / 1000, // 7 days
   },
   pages: {
     signIn: "/sign-in",
   },
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }: { token: JWT; user?: AuthUser }): Promise<JWT> {
+      // First call after a successful sign-in.
       if (user) {
         token.userId = user.id as string;
         token.name = user.name ?? "";
         token.email = user.email ?? "";
-        token.role = (user as any).role ?? "user";
-        token.refreshToken = (user as any).refreshToken; // ← add
-        token.accessTokenExpires = Date.now() + 60 * 1 * 1000; // 1 min
+        token.role = isRole(user.role) ? user.role : ("agent" as Role);
+        token.refreshToken = user.refreshToken;
+        token.accessTokenExpires = Date.now() + ACCESS_TOKEN_TTL_MS;
         return token;
       }
 
-       if (Date.now() < token.accessTokenExpires) {
-    return token;
-    }
-     console.log("🔄 Access token expired, refreshing...");
-     try {
-    await connectToDatabase();
+      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+        return token;
+      }
 
-    const tokenDoc = await Token.findOne({
-      refresh_token: token.refreshToken,
-      revoked: false,
-    });
+      try {
+        await connectToDatabase();
 
-    console.log(token.refreshToken)
+        const tokenDoc = await Token.findOne({
+          refresh_token: token.refreshToken,
+          revoked: false,
+        });
 
-    if (!tokenDoc || tokenDoc.expires_at < new Date()) {
-      console.log("❌ Refresh token invalid or expired");
-      return { ...token, error: "RefreshTokenExpired" };
-    }
+        if (!tokenDoc || tokenDoc.expires_at < new Date()) {
+          return { ...token, error: "RefreshTokenExpired" };
+        }
 
-    // Rotate refresh token
-    const newRefreshToken = crypto.randomUUID();
-    tokenDoc.refresh_token = newRefreshToken;
-    tokenDoc.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await tokenDoc.save();
+        // Rotate: a stolen refresh token is only good until the next rotation.
+        const newRefreshToken = crypto.randomUUID();
+        tokenDoc.refresh_token = newRefreshToken;
+        tokenDoc.expires_at = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+        await tokenDoc.save();
 
-    console.log("✅ Token rotated successfully");
-    return {
-      ...token,
-      refreshToken: newRefreshToken,
-      accessTokenExpires: Date.now() + 60 * 15 * 1000,
-      error: undefined,
-    };
-  } catch (err) {
-    console.log("❌ Error refreshing token:", err);
-    return { ...token, error: "RefreshTokenExpired" };
-  }
+        return {
+          ...token,
+          refreshToken: newRefreshToken,
+          accessTokenExpires: Date.now() + ACCESS_TOKEN_TTL_MS,
+          error: undefined,
+        };
+      } catch (error) {
+        console.error("jwt refresh failed:", error);
+        return { ...token, error: "RefreshTokenExpired" };
+      }
     },
-    async session({ session, token }: { session: any; token: any }) {
+
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token) {
         session.user.id = token.userId;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
+        session.user.name = token.name ?? "";
+        session.user.email = token.email ?? "";
         session.user.role = token.role;
-        session.error = token.error
+        session.error = token.error;
       }
       return session;
     },
@@ -80,28 +88,39 @@ export const authOptions = {
         email: {},
         password: {},
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Throttle credential stuffing. Keyed on the email so one attacker
+        // cannot lock out a whole office NAT by hammering other accounts.
+        const email = String(credentials.email).trim().toLowerCase();
+        const verdict = await rateLimit("sign-in", email, LIMITS.signIn);
+        if (!verdict.ok) {
+          console.warn("sign-in rate limited", { email, url: request?.url });
+          return null;
+        }
+
         await connectToDatabase();
 
-        const user = await User.findOne({ email: credentials.email });
-        if (!user) return null;
+        const user = await User.findOne({ email });
+
+        // Compare against a dummy hash when the account is missing or has no
+        // password, so a failed lookup costs the same time as a wrong password
+        // and cannot be used to tell the two apart.
+        const hash =
+          user?.password ??
+          "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+        const isValid = await bcrypt.compare(String(credentials.password), hash);
+
+        if (!user || !user.password || !isValid) return null;
         if (user.isActive === false) return null;
-        if (!user.password) return null;
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password,
-        );
-        if (!isValid) return null;
-
-        // Generate and store refresh token
         const refreshToken = crypto.randomUUID();
         await Token.create({
           user_id: user._id,
           refresh_token: refreshToken,
           revoked: false,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
         });
 
         return {

@@ -9,6 +9,7 @@ import { formatDashboardMessage } from "@/lib/formatDashboard";
 import { useSession } from "next-auth/react";
 import RoleGate from "@/components/RoleGate";
 import { cn } from "@/lib/utils";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
 const fieldClass =
   "rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-[box-shadow,border-color] focus-visible:border-muted-foreground focus-visible:ring-[3px] focus-visible:ring-foreground/10";
@@ -34,6 +35,10 @@ function Body() {
   const byCampaign = useAppSelector((state) => state.leads.byCampaign);
   const byTotal = useAppSelector((state) => state.leads.totalLeads);
   const lastLead = useAppSelector((state) => state.leads.lastLead);
+  const leadsStatus = useAppSelector((state) => state.leads.status);
+
+  // Only skeleton the first load — a refetch keeps the numbers on screen.
+  const loading = leadsStatus === "loading" && byUser.length === 0;
 
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [copied, setCopied] = useState(false);
@@ -138,7 +143,15 @@ function Body() {
 
         {/* Stat tiles */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {stats.map((stat) => (
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={cn(cardClass, "flex flex-col gap-1.5 p-4.5")}>
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))
+            : stats.map((stat) => (
             <div key={stat.label} className={cn(cardClass, "flex flex-col gap-1.5 p-4.5")}>
               <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
               <span className="text-3xl leading-none font-semibold tracking-tighter">
@@ -163,7 +176,22 @@ function Body() {
               </div>
             </header>
 
-            {byUser.length === 0 ? (
+            {loading ? (
+              <SkeletonRegion label="Loading agents">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-4 border-b px-5 py-4 last:border-b-0"
+                  >
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <Skeleton className="size-7.5 shrink-0 rounded-lg" />
+                      <Skeleton className="h-3.5 w-32" />
+                    </div>
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))}
+              </SkeletonRegion>
+            ) : byUser.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted-foreground">
                 No agents on your team have logged a lead yet.
               </p>
@@ -212,7 +240,19 @@ function Body() {
               </p>
             </header>
 
-            {byCampaign.length === 0 ? (
+            {loading ? (
+              <SkeletonRegion className="flex flex-col gap-3.5 p-5" label="Loading campaigns">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Skeleton className="h-3.5 w-28" />
+                      <Skeleton className="h-3.5 w-6" />
+                    </div>
+                    <Skeleton className="h-1.5 w-full rounded-full" />
+                  </div>
+                ))}
+              </SkeletonRegion>
+            ) : byCampaign.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted-foreground">
                 No campaigns assigned to your team yet.
               </p>

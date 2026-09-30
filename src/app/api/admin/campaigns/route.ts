@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Campaign from "@/models/Campaign";
+import Business from "@/models/Business";
+import mongoose from "mongoose";
 import { auth } from "@/lib/auth";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,30 +28,57 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {
     await connectToDatabase();
-    const { name } = await req.json();
+    const { name, busniess_id } = await req.json();
 
-    if (!name) {
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+
+    if (!trimmedName) {
       return NextResponse.json(
         { message: "Campaign name is required" },
         { status: 400 }
       );
     }
 
-    const existingCampaign = await Campaign.findOne({ name });
+    // The schema marks busniess_id required. This route used to create with
+    // `{ name }` alone, which threw a ValidationError on every call — so super
+    // admin campaign creation never worked. The super admin is the one role not
+    // scoped to a business, so the target has to come in on the body.
+    if (!busniess_id || !mongoose.isValidObjectId(busniess_id)) {
+      return NextResponse.json(
+        { message: "Pick the business this campaign belongs to" },
+        { status: 400 }
+      );
+    }
+
+    const business = await Business.findById(busniess_id).select("_id");
+    if (!business) {
+      return NextResponse.json({ message: "Business not found" }, { status: 404 });
+    }
+
+    // Names only have to be unique inside a business — two companies may both
+    // run a "Spring Outbound".
+    const existingCampaign = await Campaign.findOne({
+      name: trimmedName,
+      busniess_id: business._id,
+    });
     if (existingCampaign) {
       return NextResponse.json(
-        { message: "Campaign with this name already exists" },
+        { message: "That business already has a campaign with this name" },
         { status: 409 }
       );
     }
 
-    const newCampaign = await Campaign.create({ name });
+    // team_id stays null: the owner assigns it to a team from their teams page.
+    const newCampaign = await Campaign.create({
+      name: trimmedName,
+      busniess_id: business._id,
+    });
 
     return NextResponse.json(
       { message: "Campaign created successfully", campaign: newCampaign },

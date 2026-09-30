@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
+import { enforceRateLimit, LIMITS } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = await enforceRateLimit(req, "create-password", LIMITS.createPassword);
+    if (limited) return limited;
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -13,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

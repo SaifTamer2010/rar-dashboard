@@ -1,11 +1,13 @@
 "use client";
 
+import RoleGate from "@/components/RoleGate";
+
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import SoundStoreManager from "@/components/SoundStoreManager";
 
-export default function SoundsPage() {
+function SoundsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -34,7 +36,7 @@ export default function SoundsPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Sound store</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Shared library of lead sounds. Preview one, then set it as your default.
+              Your business&apos;s library of lead sounds. Preview one, then set it as your default.
             </p>
           </div>
         </div>
@@ -42,5 +44,13 @@ export default function SoundsPage() {
         <SoundStoreManager />
       </main>
     </div>
+  );
+}
+
+export default function GuardedSoundsPage() {
+  return (
+    <RoleGate role={["agent", "team_leader"]}>
+      <SoundsPage />
+    </RoleGate>
   );
 }

@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { pusherServer } from "@/lib/pusher-server";
-import { sendTelegramToBusniess } from "@/lib/telegram";
+import { leadsChannel } from "@/lib/pusher-client";
+import { sendTelegramToTeam } from "@/lib/telegram";
 import Lead from "@/models/Lead";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
 import { getViewerTeamId } from "@/lib/team";
+import { getViewerBusinessId } from "@/lib/business";
 import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
@@ -33,13 +35,11 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Find user first
-    let user = await User.findById(session.user.id);
-    
-    // Backup: find by name if ID lookup fails
-    if (!user && session.user.name) {
-      user = await User.findOne({ name: session.user.name });
-    }
+    // The session id is the only authoritative handle on the caller. There used
+    // to be a `findOne({ name })` fallback here; names are display-only and no
+    // longer unique, so that could resolve a *different* account and log the
+    // lead against them. A missing user is a re-login, not a guess.
+    const user = await User.findById(session.user.id);
 
     if (!user) {
       console.error("Lead API Error: User not found.", {
@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
     const campaignObject = await Campaign.findById(campaignId);
     const campaignName = campaignObject?.name || "Unknown Campaign";
 
-    await pusherServer.trigger("leads-channel", "lead-added", {
+    // The team id comes from the session lookup above, never from the body, so
+    // a caller cannot broadcast into another team's feed.
+    await pusherServer.trigger(leadsChannel(String(teamId)), "lead-added", {
       userName: user.name,
       userId: user._id.toString(), // just send the ID
       campaignName,
@@ -87,11 +89,18 @@ export async function POST(req: NextRequest) {
       ? `@${user.telegramUsername}`
       : user.name;
 
-    // Fetch personal or global message template
+    // Fetch personal or business message template
     const Settings = (await import("@/models/Settings")).default;
-    const settings = await Settings.findOne();
-    
-    // Priority: User Personal Template > Global Settings Template > Hardcoded Default
+    const busniessId = await getViewerBusinessId(String(user._id), user.role);
+
+    // A bare findOne() here handed one business's template to all of them. Own
+    // row first, then the legacy unscoped row — which is still the only one
+    // anything writes, so behaviour is unchanged until a business gets its own.
+    const settings =
+      (busniessId && (await Settings.findOne({ busniess_id: busniessId }))) ||
+      (await Settings.findOne({ busniess_id: null }));
+
+    // Priority: User Personal Template > Business Settings Template > Hardcoded Default
     const leadMessageTemplate = user.get("leadMessageTemplate", null, { strict: false });
     const template = leadMessageTemplate || settings?.leadMessageTemplate;
 
@@ -103,8 +112,9 @@ export async function POST(req: NextRequest) {
         .replace(/{campaign}/gi, campaignName);
     }
 
-    // Goes to the chat the user's own business configured, nowhere else.
-    await sendTelegramToBusniess(user.busniess_id, message);
+    // Goes to this agent's team chat — three teams, three separate feeds.
+    // Falls back to the business-wide chat when the team has none set.
+    await sendTelegramToTeam(teamId, message);
 
     return NextResponse.json({ success: true, lead });
   } catch (error) {

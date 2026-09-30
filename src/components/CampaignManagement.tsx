@@ -5,14 +5,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCampaigns, addCampaign, updateCampaign, deleteCampaign } from "@/store/slices/campaignsSlice";
 import toast from "react-hot-toast";
-import { ICampaign } from "@/models/Campaign";
 import { Pencil, Trash2, Plus, X } from "lucide-react";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
+import type { Campaign, CampaignInput, CampaignScope } from "@/store/slices/campaignsSlice";
+
+interface AdminBusiness {
+  _id: string;
+  company_name: string;
+}
 
 interface CampaignFormProps {
-  initialData?: Partial<ICampaign>;
-  onSubmit: (data: any) => void;
+  initialData?: Campaign;
+  onSubmit: (data: CampaignInput) => void;
   onCancel: () => void;
   isEdit?: boolean;
+  /**
+   * Super admin only. A campaign is required to belong to a business and the
+   * super admin is the one role not scoped to one, so they have to pick. A
+   * leader's business comes off their session, so this stays undefined there.
+   */
+  businesses?: AdminBusiness[];
 }
 
 const fieldClass =
@@ -30,12 +42,18 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
   onSubmit,
   onCancel,
   isEdit = false,
+  businesses,
 }) => {
   const [name, setName] = useState(initialData?.name || "");
+  const [businessId, setBusinessId] = useState("");
+
+  // The business is fixed once a campaign exists — moving one between companies
+  // would orphan its leads, so it is only asked for on create.
+  const needsBusiness = !isEdit && !!businesses;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name });
+    onSubmit(needsBusiness ? { name, busniess_id: businessId } : { name });
   };
 
   return (
@@ -77,6 +95,30 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
         />
       </div>
 
+      {needsBusiness && (
+        <div className="mt-4 flex flex-col gap-1.5">
+          <label className={labelClass}>Business</label>
+          <select
+            className={fieldClass}
+            value={businessId}
+            onChange={(e) => setBusinessId(e.target.value)}
+            required
+          >
+            <option value="" disabled>
+              {businesses?.length ? "Pick a business" : "No businesses yet"}
+            </option>
+            {businesses?.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.company_name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            It starts unassigned — the owner hands it to a team from their Teams page.
+          </p>
+        </div>
+      )}
+
       <div className="mt-6 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={secondaryButton}>
           Cancel
@@ -89,18 +131,48 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
   );
 };
 
-const CampaignManagement: React.FC = () => {
+interface CampaignManagementProps {
+  /**
+   * Whose campaigns these are. "admin" (the default) hits the super admin
+   * routes and covers every campaign; "teamlead" hits the leader routes and
+   * covers only the ones assigned to their own team. Same table either way —
+   * the server does the narrowing.
+   */
+  scope?: CampaignScope;
+}
+
+const CampaignManagement: React.FC<CampaignManagementProps> = ({ scope = "admin" }) => {
   const dispatch = useAppDispatch();
-  const { list: campaigns, status, error } = useAppSelector((state) => state.campaigns);
+  const { list: campaigns, status } = useAppSelector((state) => state.campaigns);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [businesses, setBusinesses] = useState<AdminBusiness[]>([]);
 
   useEffect(() => {
-    dispatch(fetchCampaigns());
-  }, [dispatch]);
+    dispatch(fetchCampaigns(scope));
+  }, [dispatch, scope]);
 
-  const handleAddCampaign = async (campaignData: any) => {
-    const promise = dispatch(addCampaign(campaignData)).unwrap();
+  // Only the super admin has to choose a target business, so only they pay for
+  // the extra request.
+  useEffect(() => {
+    if (scope !== "admin") return;
+
+    let cancelled = false;
+
+    fetch("/api/admin/businesses")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.businesses) setBusinesses(data.businesses);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scope]);
+
+  const handleAddCampaign = async (campaignData: CampaignInput) => {
+    const promise = dispatch(addCampaign({ ...campaignData, scope })).unwrap();
 
     toast.promise(promise, {
       loading: "Creating campaign...",
@@ -111,12 +183,14 @@ const CampaignManagement: React.FC = () => {
     try {
       await promise;
       setShowAddForm(false);
-    } catch (err) {}
+    } catch {}
   };
 
-  const handleEditCampaign = async (campaignData: any) => {
+  const handleEditCampaign = async (campaignData: CampaignInput) => {
     if (!editingCampaign) return;
-    const promise = dispatch(updateCampaign({ id: editingCampaign._id.toString(), data: campaignData })).unwrap();
+    const promise = dispatch(
+      updateCampaign({ id: editingCampaign._id.toString(), data: campaignData, scope }),
+    ).unwrap();
 
     toast.promise(promise, {
       loading: "Saving campaign...",
@@ -127,12 +201,12 @@ const CampaignManagement: React.FC = () => {
     try {
       await promise;
       setEditingCampaign(null);
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDeleteCampaign = async (campaignId: string) => {
     if (window.confirm("Are you sure you want to delete this campaign?")) {
-      const promise = dispatch(deleteCampaign(campaignId)).unwrap();
+      const promise = dispatch(deleteCampaign({ id: campaignId, scope })).unwrap();
 
       toast.promise(promise, {
         loading: "Deleting campaign...",
@@ -144,9 +218,26 @@ const CampaignManagement: React.FC = () => {
 
   if (status === "loading" && campaigns.length === 0) {
     return (
-      <div className="rounded-xl border bg-background px-4 py-16 text-center text-sm text-muted-foreground">
-        Loading campaigns…
-      </div>
+      <SkeletonRegion
+        className="divide-y overflow-hidden rounded-xl border bg-background"
+        label="Loading campaigns"
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <Skeleton className="size-8 shrink-0 rounded-lg" />
+              <div className="min-w-0 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-7 w-16 rounded-lg" />
+              <Skeleton className="h-7 w-16 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </SkeletonRegion>
     );
   }
 
@@ -172,10 +263,14 @@ const CampaignManagement: React.FC = () => {
           >
             <div className="w-full max-w-lg">
               {showAddForm ? (
-                <CampaignForm onSubmit={handleAddCampaign} onCancel={() => setShowAddForm(false)} />
+                <CampaignForm
+                  onSubmit={handleAddCampaign}
+                  onCancel={() => setShowAddForm(false)}
+                  businesses={scope === "admin" ? businesses : undefined}
+                />
               ) : (
                 <CampaignForm
-                  initialData={editingCampaign}
+                  initialData={editingCampaign ?? undefined}
                   onSubmit={handleEditCampaign}
                   onCancel={() => setEditingCampaign(null)}
                   isEdit={true}

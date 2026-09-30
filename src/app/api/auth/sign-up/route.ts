@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
-import Busniess from "@/models/Busniess";
+import Business from "@/models/Business";
+import { enforceRateLimit, LIMITS } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = await enforceRateLimit(req, "sign-up", LIMITS.signUp);
+    if (limited) return limited;
+
     const { name, email, companyName, password } = await req.json();
 
     if (!name || !email || !companyName || !password) {
@@ -21,11 +25,13 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Sign in looks users up by name, so it has to stay unique.
-    const existing = await User.findOne({ $or: [{ name }, { email }] });
+    // Email is the only identity key — names are free to repeat.
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return NextResponse.json(
-        { error: "That name or email is already taken" },
+        { error: "That email is already taken" },
         { status: 409 },
       );
     }
@@ -33,13 +39,13 @@ export async function POST(req: NextRequest) {
     const hashed = await bcrypt.hash(password, 12);
 
     const user = await User.create({
-      name,
-      email,
+      name: String(name).trim(),
+      email: normalizedEmail,
       password: hashed,
       role: "busniess_owner",
     });
 
-    await Busniess.create({
+    await Business.create({
       user_id: user._id,
       company_name: companyName,
     });

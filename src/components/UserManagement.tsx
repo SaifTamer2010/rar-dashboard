@@ -7,12 +7,13 @@ import { fetchUsers, addUser, updateUser, deleteUser } from "@/store/slices/user
 import { IUser } from "@/models/User";
 import toast from "react-hot-toast";
 import { Pencil, Trash2, Plus, X, Play, Square } from "lucide-react";
-
-type Role = "admin" | "user" | "viewer";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
+import { ROLES, ROLE_LABELS, type Role } from "@/lib/roles";
+import type { CreateUserInput, UpdateUserInput } from "@/store/slices/usersSlice";
 
 interface UserFormProps {
   initialData?: Partial<IUser>;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateUserInput | UpdateUserInput) => void;
   onCancel: () => void;
   isEdit?: boolean;
 }
@@ -59,6 +60,7 @@ const UserForm: React.FC<UserFormProps> = ({
   isEdit = false,
 }) => {
   const [name, setName] = useState(initialData?.name || "");
+  const [email, setEmail] = useState(initialData?.email || "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>((initialData?.role as Role) || "user");
   const [isActive, setActive] = useState(initialData?.isActive ?? true);
@@ -71,6 +73,7 @@ const UserForm: React.FC<UserFormProps> = ({
     e.preventDefault();
     onSubmit({
       name,
+      email: email.trim(),
       password: password || undefined,
       role,
       isActive: isActive,
@@ -94,7 +97,7 @@ const UserForm: React.FC<UserFormProps> = ({
             {isEdit ? "Edit user" : "New user"}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isEdit ? "Leave the password blank to keep the current one." : "They sign in with this name."}
+            {isEdit ? "Leave the password blank to keep the current one." : "They sign in with this email."}
           </p>
         </div>
         <button
@@ -114,6 +117,19 @@ const UserForm: React.FC<UserFormProps> = ({
             className={fieldClass}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className={labelClass}>Email</label>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            className={fieldClass}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
@@ -139,9 +155,11 @@ const UserForm: React.FC<UserFormProps> = ({
             value={role}
             onChange={(e) => setRole(e.target.value as Role)}
           >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-            <option value="viewer">Viewer</option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -198,16 +216,17 @@ const UserForm: React.FC<UserFormProps> = ({
 
 const UserManagement: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { list: users, status, error } = useAppSelector((state) => state.users);
+  const { list: users, status } = useAppSelector((state) => state.users);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<IUser | null>(null);
 
   useEffect(() => {
     dispatch(fetchUsers());
   }, [dispatch]);
 
-  const handleAddUser = async (userData: any) => {
-    const promise = dispatch(addUser(userData)).unwrap();
+  const handleAddUser = async (userData: CreateUserInput | UpdateUserInput) => {
+    const created = userData as CreateUserInput;
+    const promise = dispatch(addUser(created)).unwrap();
 
     toast.promise(promise, {
       loading: "Adding user...",
@@ -218,10 +237,10 @@ const UserManagement: React.FC = () => {
     try {
       await promise;
       setShowAddForm(false);
-    } catch (err) {}
+    } catch {}
   };
 
-  const handleEditUser = async (userData: any) => {
+  const handleEditUser = async (userData: CreateUserInput | UpdateUserInput) => {
     if (!editingUser) return;
     const promise = dispatch(updateUser({ id: editingUser._id.toString(), data: userData })).unwrap();
 
@@ -234,7 +253,7 @@ const UserManagement: React.FC = () => {
     try {
       await promise;
       setEditingUser(null);
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -254,9 +273,26 @@ const UserManagement: React.FC = () => {
 
   if (status === "loading" && users.length === 0) {
     return (
-      <div className="rounded-xl border bg-background px-4 py-16 text-center text-sm text-muted-foreground">
-        Loading users…
-      </div>
+      <SkeletonRegion
+        className="divide-y overflow-hidden rounded-xl border bg-background"
+        label="Loading users"
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <Skeleton className="size-8 shrink-0 rounded-lg" />
+              <div className="min-w-0 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-7 w-16 rounded-lg" />
+              <Skeleton className="h-7 w-16 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </SkeletonRegion>
     );
   }
 
@@ -285,7 +321,7 @@ const UserManagement: React.FC = () => {
                 <UserForm onSubmit={handleAddUser} onCancel={() => setShowAddForm(false)} />
               ) : (
                 <UserForm
-                  initialData={editingUser}
+                  initialData={editingUser ?? undefined}
                   onSubmit={handleEditUser}
                   onCancel={() => setEditingUser(null)}
                   isEdit={true}

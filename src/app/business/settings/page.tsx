@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import RoleGate from "@/components/RoleGate";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
+import ChatIdFinder from "@/components/ChatIdFinder";
 
 const fieldClass =
   "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-[box-shadow,border-color] placeholder:text-muted-foreground/70 focus-visible:border-muted-foreground focus-visible:ring-[3px] focus-visible:ring-foreground/10 disabled:opacity-50";
@@ -10,7 +12,7 @@ const fieldClass =
 const buttonClass =
   "cursor-pointer rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50";
 
-export default function BusniessSettingsPage() {
+export default function BusinessSettingsPage() {
   return (
     <RoleGate role="busniess_owner">
       <Body />
@@ -23,19 +25,22 @@ function Body() {
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [botTokenSet, setBotTokenSet] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingTelegram, setSavingTelegram] = useState(false);
+  const [savingBot, setSavingBot] = useState(false);
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      const res = await fetch("/api/busniess/settings");
+      const res = await fetch("/api/business/settings");
       const data = res.ok ? await res.json() : null;
       if (cancelled || !data) return;
 
@@ -43,6 +48,8 @@ function Body() {
       setEmail(data.email);
       setCompanyName(data.companyName);
       setTelegramChatId(data.telegramChatId);
+      // The token itself never comes back — only whether one is stored.
+      setBotTokenSet(data.telegramBotTokenSet);
       setLoading(false);
     })();
 
@@ -51,10 +58,13 @@ function Body() {
     };
   }, []);
 
-  async function save(payload: Record<string, string>, done: (v: boolean) => void) {
+  async function save(
+    payload: Record<string, string | null>,
+    done: (v: boolean) => void,
+  ) {
     done(true);
 
-    const res = await fetch("/api/busniess/settings", {
+    const res = await fetch("/api/business/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -89,6 +99,29 @@ function Body() {
     }
   }
 
+  async function saveBotToken() {
+    if (!telegramBotToken.trim()) {
+      toast.error("Paste a bot token first");
+      return;
+    }
+
+    const ok = await save({ telegramBotToken: telegramBotToken.trim() }, setSavingBot);
+
+    if (ok) {
+      // Never keep a secret sitting in a form field after it is stored.
+      setTelegramBotToken("");
+      setBotTokenSet(true);
+    }
+  }
+
+  async function clearBotToken() {
+    const ok = await save({ telegramBotToken: null }, setSavingBot);
+    if (ok) {
+      setTelegramBotToken("");
+      setBotTokenSet(false);
+    }
+  }
+
   async function sendTest() {
     setTesting(true);
     const res = await fetch("/api/telegram/send-test", {
@@ -98,8 +131,10 @@ function Body() {
     });
     setTesting(false);
 
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      toast.error("Could not send — check the chat id");
+      toast.error(data.error || "Could not send — check the chat id");
       return;
     }
 
@@ -117,7 +152,23 @@ function Body() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <SkeletonRegion className="flex flex-col gap-4" label="Loading settings">
+            {Array.from({ length: 3 }).map((_, s) => (
+              <section key={s} className="rounded-xl border bg-background p-5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="mt-2 h-3 w-64" />
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="flex flex-col gap-1.5">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-10 w-full rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="mt-4 h-9 w-28 rounded-lg" />
+              </section>
+            ))}
+          </SkeletonRegion>
         ) : (
           <div className="flex flex-col gap-4">
             {/* Account + business */}
@@ -201,25 +252,91 @@ function Body() {
               </div>
             </section>
 
-            {/* Telegram */}
+            {/* Telegram bot */}
             <section className="rounded-xl border bg-background p-5">
-              <h2 className="text-[15px] font-semibold tracking-tight">Telegram</h2>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-[15px] font-semibold tracking-tight">Telegram bot</h2>
+                  <p className="mt-1 text-[13px] text-muted-foreground">
+                    Your business sends through its own bot. Create one with{" "}
+                    <span className="font-medium text-foreground">@BotFather</span>, then paste the
+                    token here and add the bot to each team&apos;s group chat.
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                    botTokenSet
+                      ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {botTokenSet ? "Connected" : "Not set"}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-1.5">
+                <label htmlFor="bot-token" className="text-[13px] font-medium">
+                  Bot token
+                </label>
+                <input
+                  id="bot-token"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={botTokenSet ? "••••••••  (stored — paste a new one to replace)" : "123456789:AA…"}
+                  value={telegramBotToken}
+                  onChange={(e) => setTelegramBotToken(e.target.value)}
+                  className={fieldClass}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Stored write-only — it is never sent back to this page.
+                </p>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2">
+                <button onClick={saveBotToken} disabled={savingBot} className={buttonClass}>
+                  {savingBot ? "Saving…" : botTokenSet ? "Replace token" : "Save token"}
+                </button>
+                {botTokenSet && (
+                  <button
+                    onClick={clearBotToken}
+                    disabled={savingBot}
+                    className="cursor-pointer rounded-lg border bg-background px-3.5 py-2 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </section>
+
+            {/* Telegram — business-wide fallback chat */}
+            <section className="rounded-xl border bg-background p-5">
+              <h2 className="text-[15px] font-semibold tracking-tight">Fallback chat</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Lead alerts go to this chat. Add the bot to your group, then paste the chat id —
-                group ids start with a minus.
+                Each team has its own chat — set those under{" "}
+                <a href="/business/teams" className="font-medium text-foreground underline">
+                  Teams
+                </a>
+                . This chat only catches teams that have not been given one yet.
               </p>
 
               <div className="mt-4 flex flex-col gap-1.5">
                 <label htmlFor="chat-id" className="text-[13px] font-medium">
                   Chat id
                 </label>
-                <input
-                  id="chat-id"
-                  placeholder="-1001234567890"
-                  value={telegramChatId}
-                  onChange={(e) => setTelegramChatId(e.target.value)}
-                  className={fieldClass}
-                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="chat-id"
+                    placeholder="-1001234567890"
+                    value={telegramChatId}
+                    onChange={(e) => setTelegramChatId(e.target.value)}
+                    className={fieldClass}
+                  />
+                  <ChatIdFinder disabled={!botTokenSet} onPick={setTelegramChatId} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Don&apos;t know it? Add your bot to the group, send any message there, then use
+                  Find my chat ID. Group ids start with a minus.
+                </p>
               </div>
 
               <div className="mt-4 flex items-center gap-2">
@@ -245,3 +362,9 @@ function Body() {
     </div>
   );
 }
+
+/**
+ * Telegram never shows a chat id anywhere in its own app, so nobody can look
+ * one up by hand. The bot can: it sees the chat behind every message sent to
+ * it, and this lists them so the owner picks instead of types.
+ */

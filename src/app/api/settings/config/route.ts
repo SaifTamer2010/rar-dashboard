@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import Settings from "@/models/Settings";
 import User from "@/models/User";
 import { auth } from "@/lib/auth";
 

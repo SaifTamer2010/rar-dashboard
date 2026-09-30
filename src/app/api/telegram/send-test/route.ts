@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendTelegramToBusniess } from "@/lib/telegram";
+import { sendTelegramToBusiness, sendTelegramToTeam, telegramError } from "@/lib/telegram";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
-import Busniess from "@/models/Busniess";
+import Business from "@/models/Business";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { message } = await req.json();
+    const { message, teamId } = await req.json();
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -21,10 +21,22 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
 
     // Owners test their own chat; anyone else tests the business they belong to.
-    const owned = await Busniess.findOne({ user_id: session.user.id }, "_id");
+    const owned = await Business.findOne({ user_id: session.user.id }, "_id");
     const sender = owned ? null : await User.findById(session.user.id, "busniess_id");
 
-    await sendTelegramToBusniess(owned?._id ?? sender?.busniess_id, message);
+    // An owner can test a specific team's chat, or the business-wide fallback.
+    const result = teamId
+      ? await sendTelegramToTeam(teamId, message)
+      : await sendTelegramToBusiness(owned?._id ?? sender?.busniess_id, message);
+
+    if (!result.sent) {
+      // `detail` is Telegram's own rejection body — it names the real problem
+      // ("chat not found", "bot was kicked"), which is what the tester needs.
+      return NextResponse.json(
+        { error: telegramError(result.reason, "detail" in result ? result.detail : undefined) },
+        { status: 400 },
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

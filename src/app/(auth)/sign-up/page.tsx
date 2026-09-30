@@ -13,6 +13,9 @@ const fieldClass =
 const submitClass =
   "w-full cursor-pointer rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50";
 
+/** Email is the account identity now, so it is worth catching typos here. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignUpPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -27,6 +30,10 @@ export default function SignUpPage() {
       setError("Fill in every field.");
       return;
     }
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -37,7 +44,7 @@ export default function SignUpPage() {
 
     const res = await fetch("/api/auth/sign-up", {
       method: "POST",
-      body: JSON.stringify({ name, email, companyName, password }),
+      body: JSON.stringify({ name, email: email.trim(), companyName, password }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -50,7 +57,7 @@ export default function SignUpPage() {
     }
 
     const signInRes = await signIn("credentials", {
-      email,
+      email: email.trim(),
       password,
       redirect: false,
     });
@@ -61,11 +68,8 @@ export default function SignUpPage() {
       return;
     }
 
-    await fetch("/api/auth/set-refresh-token", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-      headers: { "content-Type": "application/json" },
-    });
+    // Identity comes from the session cookie now, not a body we could spoof.
+    await fetch("/api/auth/set-refresh-token", { method: "POST" });
 
     const fresh = await getSession();
     setLoading(false);
@@ -124,6 +128,7 @@ export default function SignUpPage() {
               <input
                 id="name"
                 type="text"
+                autoComplete="name"
                 autoFocus
                 placeholder="Dana Whitfield"
                 value={name}
@@ -139,6 +144,8 @@ export default function SignUpPage() {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
+                inputMode="email"
                 placeholder="dana@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -153,6 +160,7 @@ export default function SignUpPage() {
               <input
                 id="company-name"
                 type="text"
+                autoComplete="organization"
                 placeholder="Whitfield Realty"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
@@ -167,6 +175,7 @@ export default function SignUpPage() {
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

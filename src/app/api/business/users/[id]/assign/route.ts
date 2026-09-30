@@ -4,7 +4,7 @@ import User from "@/models/User";
 import Team from "@/models/Team";
 import AgentProfile from "@/models/agentProfile";
 import TeamLeaderProfile from "@/models/TeamLeaderProfile";
-import { getOwnerBusniess } from "@/lib/busniess";
+import { getOwnerBusiness } from "@/lib/business";
 
 const ROLES = ["agent", "team_leader"];
 
@@ -13,9 +13,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +29,7 @@ export async function POST(
 
     await connectToDatabase();
 
-    const user = await User.findOne({ _id: id, busniess_id: busniess._id });
+    const user = await User.findOne({ _id: id, busniess_id: business._id });
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
@@ -37,9 +37,9 @@ export async function POST(
     let team;
 
     if (newTeamName) {
-      team = await Team.create({ name: newTeamName, busniess_id: busniess._id });
+      team = await Team.create({ name: newTeamName, busniess_id: business._id });
     } else if (teamId) {
-      team = await Team.findOne({ _id: teamId, busniess_id: busniess._id });
+      team = await Team.findOne({ _id: teamId, busniess_id: business._id });
     }
 
     if (!team) {
@@ -90,9 +90,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const busniess = await getOwnerBusniess();
+  const business = await getOwnerBusiness();
 
-  if (!busniess) {
+  if (!business) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -100,7 +100,7 @@ export async function DELETE(
     const { id } = await params;
     await connectToDatabase();
 
-    const user = await User.findOne({ _id: id, busniess_id: busniess._id });
+    const user = await User.findOne({ _id: id, busniess_id: business._id });
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }

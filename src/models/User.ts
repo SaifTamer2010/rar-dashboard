@@ -16,9 +16,12 @@ export interface IUser extends Document {
 }
 
 const UserSchema = new Schema<IUser>({
-  name: { type: String, required: true },
-  email:{type:String,required:true},
-  busniess_id:{type:Schema.Types.ObjectId, ref:"Busniess", default:null, index:true},
+  // Display name only — two people may share one, email is the identity key.
+  name: { type: String, required: true, trim: true },
+  // lowercase + trim run on writes and on query filters, so a lookup can never
+  // miss an account over casing alone.
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  busniess_id:{type:Schema.Types.ObjectId, ref:"Business", default:null, index:true},
   password: { type: String, default: null },
   soundUrl: { type: String, default: null },
   role: { type: String, enum: ["super_admin","busniess_owner","team_leader","agent"] }, 

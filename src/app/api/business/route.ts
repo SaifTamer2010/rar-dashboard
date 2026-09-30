@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import Busniess from "@/models/Busniess";
+import Business from "@/models/Business";
 import { auth } from "@/lib/auth";
 
 /** The signed-in owner's business. Name only for now. */
@@ -13,13 +13,13 @@ export async function GET() {
 
   try {
     await connectToDatabase();
-    const busniess = await Busniess.findOne({ user_id: session.user.id });
+    const business = await Business.findOne({ user_id: session.user.id });
 
-    if (!busniess) {
+    if (!business) {
       return NextResponse.json({ message: "No business found" }, { status: 404 });
     }
 
-    return NextResponse.json({ companyName: busniess.company_name });
+    return NextResponse.json({ companyName: business.company_name });
   } catch (error) {
     console.error("Error fetching business:", error);
     return NextResponse.json({ message: "Error fetching business" }, { status: 500 });

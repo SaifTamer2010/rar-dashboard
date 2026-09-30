@@ -1,13 +1,16 @@
 "use client";
 
+import RoleGate from "@/components/RoleGate";
+
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchLeadsStats } from "@/store/slices/leadsSlice";
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
-export default function LeaderboardPage() {
+function LeaderboardPage() {
   const dispatch = useAppDispatch();
   const { byUser, totalLeads, status } = useAppSelector((state) => state.leads);
   const loading = status === "loading";
@@ -38,11 +41,18 @@ export default function LeaderboardPage() {
 
         <div className="overflow-hidden rounded-xl border bg-background">
           {loading && sortedUsers.length === 0 ? (
-            <div className="flex flex-col gap-px">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-14 animate-pulse bg-muted" />
+            <SkeletonRegion label="Loading leaderboard">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 border-b px-4 py-3 last:border-0"
+                >
+                  <Skeleton className="size-8 shrink-0 rounded-lg" />
+                  <Skeleton className="h-3.5 w-36" />
+                  <Skeleton className="ml-auto h-4 w-10" />
+                </div>
               ))}
-            </div>
+            </SkeletonRegion>
           ) : sortedUsers.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">
               No leads logged yet. Nobody on the board.
@@ -96,5 +106,13 @@ export default function LeaderboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function GuardedLeaderboardPage() {
+  return (
+    <RoleGate role={["agent", "team_leader"]}>
+      <LeaderboardPage />
+    </RoleGate>
   );
 }

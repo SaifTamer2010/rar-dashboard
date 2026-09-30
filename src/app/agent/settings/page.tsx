@@ -1,5 +1,7 @@
 "use client";
 
+import RoleGate from "@/components/RoleGate";
+
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +13,7 @@ import {
   Music2,
   RefreshCcw,
 } from "lucide-react";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
 interface GlobalSound {
   _id: string;
@@ -34,7 +37,7 @@ const secondaryButton =
   "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border bg-background px-3.5 py-2 text-[13px] font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50";
 const cardClass = "rounded-xl border bg-background p-6";
 
-export default function SettingsPage() {
+function SettingsPage() {
   const { data: session, update } = useSession();
 
   // Profile
@@ -66,13 +69,29 @@ export default function SettingsPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Seed the name field from whichever session we have, without bouncing it
+  // through an effect on every session object identity change.
+  const sessionName = session?.user?.name;
+  const [lastSessionName, setLastSessionName] = useState(sessionName);
+  if (sessionName && sessionName !== lastSessionName) {
+    setLastSessionName(sessionName);
+    setName(sessionName);
+  }
+
   useEffect(() => {
-    if (session?.user) {
-      setName(session.user.name);
-      fetch("/api/user/me")
-        .then((r) => r.json())
-        .then((data) => setTelegramUsername(data.telegramUsername || ""));
-    }
+    if (!session?.user) return;
+    let cancelled = false;
+
+    fetch("/api/user/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setTelegramUsername(data.telegramUsername || "");
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
 
   useEffect(() => {
@@ -136,7 +155,13 @@ export default function SettingsPage() {
   }
 
   async function handleSoundUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+
+    // Clearing the input is what lets the same file be picked twice. Without it
+    // a retry fires no change event at all and the button looks dead.
+    input.value = "";
+
     if (!file) return;
 
     if (!file.type.startsWith("audio/")) {
@@ -144,19 +169,44 @@ export default function SettingsPage() {
       return;
     }
 
+    // Set before the metadata read, not after — decoding is the slowest part of
+    // this and it used to happen with no feedback on screen at all.
+    setSoundLoading(true);
+    setSoundMsg("");
+
     const duration = await getAudioDuration(file);
-    if (duration > 10) {
+
+    // `null` means the browser could not decode it. Some containers also report
+    // Infinity or NaN for a perfectly short clip, so only a real number is worth
+    // rejecting on — otherwise a two-second file got told it was over ten.
+    if (duration === null) {
+      setSoundLoading(false);
+      setSoundMsg("This file could not be read. Try an MP3 or WAV.");
+      return;
+    }
+
+    if (Number.isFinite(duration) && duration > 10) {
+      setSoundLoading(false);
       setSoundMsg("Sound must be 10 seconds or less.");
       return;
     }
 
-    setSoundLoading(true);
-    setSoundMsg("");
-
     const reader = new FileReader();
+
+    reader.onerror = () => {
+      setSoundLoading(false);
+      setSoundMsg("Could not read that file. Try again.");
+    };
+
     reader.onload = async () => {
       const result = reader.result as string;
       const base64 = result.split(",")[1];
+
+      if (!base64) {
+        setSoundLoading(false);
+        setSoundMsg("That file came back empty. Try another one.");
+        return;
+      }
 
       // Normalize mimeType for better browser support
       const normalizedMimeType = file.type === "audio/mp3" ? "audio/mpeg" : file.type;
@@ -167,40 +217,68 @@ export default function SettingsPage() {
         name: file.name.split('.')[0] || "Custom Sound"
       };
 
-      const res = await fetch("/api/settings/sound", {
-        method: "POST",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      });
+      // This runs inside an event handler, so a throw here is unhandled and the
+      // button stays stuck on "Uploading…" forever. Every exit sets loading off.
+      try {
+        const res = await fetch("/api/settings/sound", {
+          method: "POST",
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+        });
 
-      const data = await res.json();
-      setSoundLoading(false);
+        const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        setSoundMsg(data.error || "Upload failed");
-        if (data.error?.includes("Duplicate")) {
-          setShouldShake(true);
-          setTimeout(() => setShouldShake(false), 500);
+        if (!res.ok) {
+          setSoundMsg(data.error || "Upload failed");
+          if (data.error?.includes("Duplicate")) {
+            setShouldShake(true);
+            setTimeout(() => setShouldShake(false), 500);
+          }
+          return;
         }
-        return;
-      }
 
-      setSoundUrl(data.soundUrl);
-      setSoundMsg("Sound uploaded!");
-      fetchGlobalSounds(); // Refresh the library
+        setSoundUrl(data.soundUrl);
+        setSoundMsg("Sound uploaded!");
+        fetchGlobalSounds(); // Refresh the library
+      } catch (err) {
+        console.error("sound upload failed:", err);
+        setSoundMsg("Upload failed. Check your connection and try again.");
+      } finally {
+        setSoundLoading(false);
+      }
     };
 
     reader.readAsDataURL(file);
   }
 
-  function getAudioDuration(file: File): Promise<number> {
+  /**
+   * Duration in seconds, or null when the browser cannot decode the file.
+   *
+   * `onloadedmetadata` used to be the only exit. A codec the browser does not
+   * support fires `onerror` instead — or nothing at all — so the promise never
+   * settled and the whole upload hung silently with the button still enabled.
+   * Both other exits are covered now, and the timeout catches the case where
+   * neither event ever arrives.
+   */
+  function getAudioDuration(file: File): Promise<number | null> {
     return new Promise((resolve) => {
       const audio = document.createElement("audio");
-      audio.src = URL.createObjectURL(file);
-      audio.onloadedmetadata = () => {
-        URL.revokeObjectURL(audio.src);
-        resolve(audio.duration);
+      const url = URL.createObjectURL(file);
+      let settled = false;
+
+      const finish = (value: number | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        URL.revokeObjectURL(url);
+        resolve(value);
       };
+
+      const timer = setTimeout(() => finish(null), 5000);
+
+      audio.onloadedmetadata = () => finish(audio.duration);
+      audio.onerror = () => finish(null);
+      audio.src = url;
     });
   }
 
@@ -252,6 +330,7 @@ export default function SettingsPage() {
         setSoundMsg("Failed to apply sound");
       }
     } catch (err) {
+      console.error("apply sound failed:", err);
       setSoundMsg("Error applying sound");
     } finally {
       setSoundLoading(false);
@@ -466,7 +545,20 @@ export default function SettingsPage() {
 
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {libraryLoading ? (
-                  <p className="col-span-full py-6 text-center text-sm text-muted-foreground">Loading…</p>
+                  <SkeletonRegion className="contents" label="Loading your sounds">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <Skeleton className="size-8 shrink-0 rounded-lg" />
+                          <Skeleton className="h-3.5 w-28" />
+                        </div>
+                        <Skeleton className="size-7 rounded-lg" />
+                      </div>
+                    ))}
+                  </SkeletonRegion>
                 ) : globalSounds.length === 0 ? (
                   <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
                     Nothing uploaded yet.
@@ -579,7 +671,20 @@ export default function SettingsPage() {
 
             <div className="mt-4 flex max-h-200 flex-col gap-2 overflow-y-auto">
               {historyLoading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+                <SkeletonRegion className="flex flex-col gap-2" label="Loading your leads">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2.5"
+                    >
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-3.5 w-32" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                      <Skeleton className="size-7 rounded-lg" />
+                    </div>
+                  ))}
+                </SkeletonRegion>
               ) : leads.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">No leads logged yet.</p>
               ) : (
@@ -656,5 +761,13 @@ export default function SettingsPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function GuardedSettingsPage() {
+  return (
+    <RoleGate role="agent">
+      <SettingsPage />
+    </RoleGate>
   );
 }

@@ -12,13 +12,17 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
+import { Skeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
-interface GlobalSound {
+/** One row of the business's private sound store. */
+interface StoredSound {
   _id: string;
   name: string;
   base64: string;
   mimeType: string;
   uploaderName?: string;
+  /** Uploaded before the store was scoped: shared with everyone, undeletable. */
+  legacy?: boolean;
 }
 
 const cardClass = "rounded-xl border bg-background";
@@ -27,20 +31,22 @@ const iconButton =
 
 const SoundStoreManager: React.FC = () => {
   const { data: session } = useSession();
-  const [sounds, setSounds] = useState<GlobalSound[]>([]);
+  const [sounds, setSounds] = useState<StoredSound[]>([]);
+  const [hasBusiness, setHasBusiness] = useState(true);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const fetchSounds = async () => {
-    setLoading(true);
+  const fetchSounds = async ({ initial = false } = {}) => {
+    if (!initial) setLoading(true);
     try {
       const res = await fetch("/api/sounds");
       const data = await res.json();
       setSounds(data.sounds || []);
-    } catch (err) {
-      console.error("Failed to fetch sounds:", err);
+      setHasBusiness(data.hasBusiness !== false);
+    } catch (error) {
+      console.error("Failed to fetch sounds:", error);
       toast.error("Failed to load sound store");
     } finally {
       setLoading(false);
@@ -48,10 +54,12 @@ const SoundStoreManager: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSounds();
+    // `loading` already starts true, so the first pass skips the synchronous
+    // setState that would otherwise force a second render.
+    fetchSounds({ initial: true });
   }, []);
 
-  const handlePreview = (sound: GlobalSound) => {
+  const handlePreview = (sound: StoredSound) => {
     if (audioRef.current) {
       // Normalize mimeType for browser compatibility
       const mime = sound.mimeType === "audio/mp3" ? "audio/mpeg" : sound.mimeType;
@@ -67,7 +75,7 @@ const SoundStoreManager: React.FC = () => {
     }
   };
 
-  const handleDownload = (sound: GlobalSound) => {
+  const handleDownload = (sound: StoredSound) => {
     try {
       const mime = sound.mimeType === "audio/mp3" ? "audio/mpeg" : sound.mimeType;
       let extension = sound.mimeType.split("/")[1] || "mp3";
@@ -87,7 +95,7 @@ const SoundStoreManager: React.FC = () => {
     }
   };
 
-  const handleApply = async (sound: GlobalSound) => {
+  const handleApply = async (sound: StoredSound) => {
     setApplyingId(sound._id);
     try {
       const res = await fetch("/api/settings/sound", {
@@ -105,7 +113,7 @@ const SoundStoreManager: React.FC = () => {
       } else {
         toast.error("Failed to set default sound");
       }
-    } catch (err) {
+    } catch {
       toast.error("Error updating default sound");
     } finally {
       setApplyingId(null);
@@ -113,7 +121,7 @@ const SoundStoreManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to remove this sound from the global store?")) return;
+    if (!window.confirm("Are you sure you want to remove this sound from your business's store?")) return;
 
     try {
       const res = await fetch(`/api/admin/sounds/${id}`, { method: "DELETE" });
@@ -124,7 +132,7 @@ const SoundStoreManager: React.FC = () => {
         const data = await res.json();
         toast.error(data.error || "Failed to delete sound");
       }
-    } catch (err) {
+    } catch {
       toast.error("Error deleting sound");
     }
   };
@@ -135,6 +143,17 @@ const SoundStoreManager: React.FC = () => {
 
   const presets = sounds.slice(0, 2);
   const isAdmin = ["super_admin", "busniess_owner"].includes(session?.user?.role ?? "");
+
+  // The store belongs to a business, so someone on none has nothing to show —
+  // say that rather than render an empty library that looks broken.
+  if (!loading && !hasBusiness) {
+    return (
+      <div className={`${cardClass} px-4 py-12 text-center text-sm text-muted-foreground`}>
+        The sound store is private to each business. You are not on one yet — ask
+        your business owner for an invite.
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -218,7 +237,20 @@ const SoundStoreManager: React.FC = () => {
 
           <div className="max-h-125 divide-y overflow-y-auto">
             {loading ? (
-              <p className="px-4 py-12 text-center text-sm text-muted-foreground">Loading sounds…</p>
+              <SkeletonRegion className="divide-y" label="Loading sounds">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Skeleton className="size-8 shrink-0 rounded-lg" />
+                      <Skeleton className="h-3.5 w-40" />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Skeleton className="hidden h-3 w-12 sm:block" />
+                      <Skeleton className="size-7 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </SkeletonRegion>
             ) : filteredSounds.length === 0 ? (
               <p className="px-4 py-12 text-center text-sm text-muted-foreground">
                 {searchQuery ? "No sounds match that search." : "No sounds in the store yet."}
@@ -235,6 +267,11 @@ const SoundStoreManager: React.FC = () => {
                   <p className="truncate text-sm font-medium">{sound.name}</p>
                   <p className="hidden truncate text-sm text-muted-foreground sm:block">
                     {sound.uploaderName || "System"}
+                    {sound.legacy && (
+                      <span className="ml-2 rounded-md border px-1.5 py-0.5 text-[11px]">
+                        legacy
+                      </span>
+                    )}
                   </p>
                   <span className="hidden rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:block">
                     {sound.mimeType.split("/")[1]?.toUpperCase() || "AUDIO"}
@@ -259,7 +296,9 @@ const SoundStoreManager: React.FC = () => {
                     >
                       <Download className="size-4" />
                     </button>
-                    {isAdmin && (
+                    {/* Legacy rows predate the business scope and are shared with
+                        everyone, so no single business gets to delete them. */}
+                    {isAdmin && !sound.legacy && (
                       <button
                         onClick={() => handleDelete(sound._id)}
                         className="flex size-8 cursor-pointer items-center justify-center rounded-lg border bg-background text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"

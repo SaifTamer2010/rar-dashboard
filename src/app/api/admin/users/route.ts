@@ -3,11 +3,14 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { isRole } from "@/lib/roles";
 
-export async function GET(req: NextRequest) {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function GET() {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,34 +30,48 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {
     await connectToDatabase();
-    const { name, password, role, telegramUsername, soundUrl, isActive } = await req.json();
+    const { name, email, password, role, telegramUsername, soundUrl, isActive } =
+      await req.json();
 
-    if (!name || !password) {
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { message: "Name and password are required" },
+        { message: "Name, email and password are required" },
         { status: 400 }
       );
     }
 
-    const existingUser = await User.findOne({ name });
+    // Email is the identity key, so it is normalized before both the dupe check
+    // and the write — otherwise casing alone would split an account in two.
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    if (!EMAIL_RE.test(normalizedEmail)) {
+      return NextResponse.json({ message: "Enter a valid email" }, { status: 400 });
+    }
+
+    if (role !== undefined && !isRole(role)) {
+      return NextResponse.json({ message: "Unknown role" }, { status: 400 });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return NextResponse.json(
-        { message: "User with this name already exists" },
+        { message: "That email is already taken" },
         { status: 409 }
       );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
-      name,
+      name: String(name).trim(),
+      email: normalizedEmail,
       password: hashedPassword,
-      role: role || "user", // Default to 'user' if not provided
+      role: role || "agent",
       telegramUsername: telegramUsername || null,
       soundUrl: soundUrl || null,
       isActive: isActive !== undefined ? isActive : true,

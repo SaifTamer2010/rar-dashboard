@@ -10,7 +10,7 @@ export interface ICampaign extends Document {
 const CampaignSchema = new Schema<ICampaign>({
   name: { type: String, required: true},
   team_id:{type:Schema.Types.ObjectId , ref:"Team" , default:null , index:true},
-  busniess_id:{type:Schema.Types.ObjectId , ref:"Busniess" , required:true , index:true},
+  busniess_id:{type:Schema.Types.ObjectId , ref:"Business" , required:true , index:true},
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -4,9 +4,18 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
-import { sendTelegramToBusniess } from "@/lib/telegram";
+import { sendTelegramToTeam, telegramError } from "@/lib/telegram";
 import { formatDashboardMessage } from "@/lib/formatDashboard";
 import { getTeamAgentIds, getViewerTeamId } from "@/lib/team";
+
+/** Reads `name` off a populated ref, falling back when the populate missed. */
+function populatedName(ref: unknown) {
+  if (ref && typeof ref === "object" && "name" in ref) {
+    const name = (ref as { name?: unknown }).name;
+    if (typeof name === "string") return name;
+  }
+  return "Unknown";
+}
 
 export async function POST() {
   try {
@@ -104,18 +113,22 @@ export async function POST() {
       totalLeads,
       lastLead
         ? {
-            userId: { name: (lastLead.userId as any)?.name || "Unknown" },
-            campaignId: {
-              name: (lastLead.campaignId as any)?.name || "Unknown",
-            },
+            userId: { name: populatedName(lastLead.userId) },
+            campaignId: { name: populatedName(lastLead.campaignId) },
             createdAt: new Date(lastLead.createdAt).toISOString(),
           }
         : null,
       session.user.name,
     );
 
-    const sender = await User.findById(session.user.id, "busniess_id");
-    await sendTelegramToBusniess(sender?.busniess_id, message);
+    const result = await sendTelegramToTeam(teamId, message);
+
+    if (!result.sent) {
+      return NextResponse.json(
+        { error: telegramError(result.reason) },
+        { status: 400 },
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

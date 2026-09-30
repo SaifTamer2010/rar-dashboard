@@ -3,7 +3,9 @@ import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Invite from "@/models/Invite";
-import Busniess from "@/models/Busniess";
+import Business from "@/models/Business";
+import AgentProfile from "@/models/agentProfile";
+import { enforceRateLimit, LIMITS } from "@/lib/rate-limit";
 
 /** GET — what business is behind this invite token, so the join page can name it. */
 export async function GET(req: NextRequest) {
@@ -20,14 +22,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Invalid invite" }, { status: 404 });
   }
 
-  const busniess = await Busniess.findById(invite.busniess_id);
+  const business = await Business.findById(invite.busniess_id);
 
-  return NextResponse.json({ companyName: busniess?.company_name ?? null });
+  return NextResponse.json({ companyName: business?.company_name ?? null });
 }
 
 /** POST — sign up through an invite. Lands the user in the business, no team yet. */
 export async function POST(req: NextRequest) {
   try {
+    const limited = await enforceRateLimit(req, "join-invite", LIMITS.joinInvite);
+    if (limited) return limited;
+
     const { token, name, email, password } = await req.json();
 
     if (!token || !name || !email || !password) {
@@ -48,23 +53,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "This invite link is not valid" }, { status: 404 });
     }
 
-    const existing = await User.findOne({ $or: [{ name }, { email }] });
+    // Email is the only identity key — names are free to repeat.
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return NextResponse.json(
-        { error: "That name or email is already taken" },
+        { error: "That email is already taken" },
         { status: 409 },
       );
     }
 
     const hashed = await bcrypt.hash(password, 12);
 
-    await User.create({
-      name,
-      email,
+    const user = await User.create({
+      name: String(name).trim(),
+      email: normalizedEmail,
       password: hashed,
       role: "agent",
       busniess_id: invite.busniess_id,
     });
+
+    if (invite.team_id) {
+      await AgentProfile.create({ user_id: user._id, team_id: invite.team_id });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

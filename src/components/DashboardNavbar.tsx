@@ -13,7 +13,6 @@ import {
   Trophy,
   Users,
   Megaphone,
-  BarChart3,
   UserPlus,
   Timer,
   LogOut,
@@ -25,8 +24,9 @@ import {
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { roleHome } from "@/lib/roles";
-import { useBusniess } from "@/hooks/useBusniess";
+import { useBusiness } from "@/hooks/useBusiness";
 import InviteModal from "@/components/InviteModal";
+import { LogoMark } from "@/components/Logo";
 
 const DashboardNavbar = () => {
   const { data: session } = useSession();
@@ -49,16 +49,19 @@ const DashboardNavbar = () => {
     };
   }, [isOpen]);
 
-  // Route changes should never leave the menu hanging open.
-  useEffect(() => {
+  // Route changes should never leave the menu hanging open. Adjusting during
+  // render rather than in an effect avoids a second render pass per navigation.
+  const [lastPath, setLastPath] = useState(pathname);
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
     setIsOpen(false);
-  }, [pathname]);
+  }
 
   const role = session?.user?.role;
   const isSuperAdmin = role === "super_admin";
   const isBusinessOwner = role === "busniess_owner";
   const isTeamLeader = role === "team_leader";
-  const { companyName } = useBusniess();
+  const { companyName } = useBusiness();
   // Owners see their own company on the brand, everyone else sees the product.
   const brandName = isBusinessOwner ? companyName || "Your business" : "Daily Dashboard";
   const brandInitial = brandName[0]?.toUpperCase() || "D";
@@ -74,11 +77,10 @@ const DashboardNavbar = () => {
 
   // Business owners get their own links — none of the agent app.
   const businessItems = [
-    { label: "Dashboard", href: "/busniess", icon: <LayoutDashboard className="size-4" /> },
-    { label: "Teams", href: "/busniess/teams", icon: <Users className="size-4" /> },
-    { label: "Invited users", href: "/busniess/invited_users", icon: <UserPlus className="size-4" /> },
-    { label: "Campaigns", href: "/busniess/campaigns", icon: <Megaphone className="size-4" /> },
-    { label: "Reports", href: "/busniess/reports", icon: <BarChart3 className="size-4" /> },
+    { label: "Dashboard", href: "/business", icon: <LayoutDashboard className="size-4" /> },
+    { label: "Teams", href: "/business/teams", icon: <Users className="size-4" /> },
+    { label: "Invited users", href: "/business/invited_users", icon: <UserPlus className="size-4" /> },
+    { label: "Campaigns", href: "/business/campaigns", icon: <Megaphone className="size-4" /> },
   ];
 
   const agentItems = [
@@ -93,9 +95,11 @@ const DashboardNavbar = () => {
   const leaderItems = [
     { label: "Dashboard", href: "/teamlead/dashboard", icon: <LayoutDashboard className="size-4" /> },
     { label: "Intervals", href: "/teamlead/intervals", icon: <Timer className="size-4" /> },
+    { label: "Campaigns", href: "/teamlead/campaigns", icon: <Megaphone className="size-4" /> },
+    { label: "Agents", href: "/teamlead/agents", icon: <Users className="size-4" /> },
     { label: "Leaderboard", href: "/agent/leaderboard", icon: <Trophy className="size-4" /> },
     { label: "Sound Store", href: "/agent/sounds", icon: <Music2 className="size-4" /> },
-    { label: "Settings", href: "/agent/settings", icon: <Settings className="size-4" /> },
+    { label: "Settings", href: "/teamlead/settings", icon: <Settings className="size-4" /> },
   ];
 
   const menuItems = isBusinessOwner
@@ -111,15 +115,25 @@ const DashboardNavbar = () => {
     );
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  // Only the deepest matching link lights up, so "/business" stays quiet on "/business/teams".
+  const activeHref = menuItems
+    .filter((item) => pathname === item.href || pathname.startsWith(item.href + "/"))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
+  const isActive = (href: string) => href === activeHref;
 
   return (
     <header className="sticky top-0 z-100 w-full border-b bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-15 max-w-300 items-center gap-8 px-6">
         <Link href={home} className="flex shrink-0 items-center gap-2">
-          <div className="flex size-5.5 items-center justify-center rounded-md bg-foreground text-xs text-background">
-            {brandInitial}
-          </div>
+          {isBusinessOwner ? (
+            // An owner's brand is their own company, so a letter tile is right here.
+            <div className="flex size-5.5 items-center justify-center rounded-md bg-foreground text-xs text-background">
+              {brandInitial}
+            </div>
+          ) : (
+            <LogoMark size={22} />
+          )}
           <span className="text-[15px] font-semibold tracking-tight">{brandName}</span>
         </Link>
 
@@ -129,11 +143,12 @@ const DashboardNavbar = () => {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive(item.href) ? "page" : undefined}
               className={cn(
-                "transition-colors",
+                "whitespace-nowrap transition-colors",
                 isActive(item.href)
                   ? "font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {item.label}
@@ -188,10 +203,26 @@ const DashboardNavbar = () => {
                     <div className="my-1.5 h-px bg-border" />
                   </div>
 
+                  {isTeamLeader && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          setInviteOpen(true);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <UserPlus className="size-4" />
+                        <span>Invite</span>
+                      </button>
+                      <div className="my-1.5 h-px bg-border" />
+                    </>
+                  )}
+
                   {isBusinessOwner && (
                     <>
                       <Link
-                        href="/busniess/settings"
+                        href="/business/settings"
                         onClick={() => setIsOpen(false)}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
@@ -247,7 +278,17 @@ const DashboardNavbar = () => {
         </div>
       </div>
 
-      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+      {inviteOpen && (
+        <InviteModal
+          endpoint={isTeamLeader ? "/api/team/invite" : "/api/business/invite"}
+          description={
+            isTeamLeader
+              ? "Anyone with this link joins your team as an agent."
+              : "Anyone with this link can join your lobby as an agent."
+          }
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
     </header>
   );
 };

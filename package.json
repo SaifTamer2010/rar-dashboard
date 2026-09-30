@@ -1,14 +1,13 @@
 {
   "name": "rar-dashboard",
   "type": "module",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "contract:emit": "prisma-cli contract emit"
+    "lint": "eslint"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.0",

@@ -6,6 +6,38 @@ export interface Campaign {
   createdAt: string;
 }
 
+/**
+ * Body accepted by the create/update routes of every scope.
+ *
+ * `busniess_id` is admin-create only: the schema requires a business, and the
+ * super admin is the one role whose session does not imply one. Every other
+ * scope derives it server-side and ignores this field.
+ */
+export interface CampaignInput {
+  name: string;
+  busniess_id?: string;
+}
+
+/**
+ * Which route family the write thunks talk to.
+ *
+ * The two scopes are the same CRUD over different authorization: "admin" is the
+ * super admin acting on every campaign, "teamlead" is a leader acting only on
+ * the ones assigned to their own team. The server decides that — the scope just
+ * picks the door to knock on. Omitting it keeps the admin routes, which is what
+ * the existing callers expect.
+ */
+export type CampaignScope = "admin" | "teamlead";
+
+const SCOPE_BASE: Record<CampaignScope, string> = {
+  admin: "/api/admin/campaigns",
+  teamlead: "/api/teamlead/campaigns",
+};
+
+function baseUrl(scope: CampaignScope = "admin") {
+  return SCOPE_BASE[scope];
+}
+
 interface CampaignsState {
   list: Campaign[];
   status: "idle" | "loading" | "succeeded" | "failed";
@@ -20,8 +52,10 @@ const initialState: CampaignsState = {
 
 export const fetchCampaigns = createAsyncThunk(
   "campaigns/fetchCampaigns",
-  async () => {
-    const res = await fetch("/api/campaigns");
+  async (scope?: CampaignScope) => {
+    // No scope means the read-only list every signed-in user gets, already
+    // narrowed to their own team by the server.
+    const res = await fetch(scope ? baseUrl(scope) : "/api/campaigns");
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to fetch campaigns");
     return data.campaigns || [];
@@ -32,8 +66,8 @@ export const fetchCampaigns = createAsyncThunk(
 
 export const addCampaign = createAsyncThunk(
   "campaigns/addCampaign",
-  async (campaignData: any) => {
-    const res = await fetch("/api/admin/campaigns", {
+  async ({ scope, ...campaignData }: CampaignInput & { scope?: CampaignScope }) => {
+    const res = await fetch(baseUrl(scope), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(campaignData),
@@ -46,8 +80,8 @@ export const addCampaign = createAsyncThunk(
 
 export const updateCampaign = createAsyncThunk(
   "campaigns/updateCampaign",
-  async ({ id, data }: { id: string; data: any }) => {
-    const res = await fetch(`/api/admin/campaigns/${id}`, {
+  async ({ id, data, scope }: { id: string; data: CampaignInput; scope?: CampaignScope }) => {
+    const res = await fetch(`${baseUrl(scope)}/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -60,8 +94,8 @@ export const updateCampaign = createAsyncThunk(
 
 export const deleteCampaign = createAsyncThunk(
   "campaigns/deleteCampaign",
-  async (id: string) => {
-    const res = await fetch(`/api/admin/campaigns/${id}`, {
+  async ({ id, scope }: { id: string; scope?: CampaignScope }) => {
+    const res = await fetch(`${baseUrl(scope)}/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) {

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
-import Campaign from "@/models/Campaign";
 
 export async function GET() {
   try {

@@ -13,6 +13,9 @@ const fieldClass =
 const submitClass =
   "w-full cursor-pointer rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50";
 
+/** Email is the account identity now, so it is worth catching typos here. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -26,17 +29,26 @@ export default function SignInPage() {
   // Step 1 — check if user exists and has a password
   async function handleEmailSubmit() {
     if (!email.trim()) return;
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     setLoading(true);
     setError("");
 
     const res = await fetch("/api/auth/check-user", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.trim() }),
       headers: { "Content-Type": "application/json" },
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Something went wrong. Try again.");
+      return;
+    }
 
     if (!data.exists) {
       setError("No account found with that email.");
@@ -58,7 +70,7 @@ export default function SignInPage() {
     setError("");
 
     const res = await signIn("credentials", {
-      email,
+      email: email.trim(),
       password,
       redirect: false,
     });
@@ -66,11 +78,16 @@ export default function SignInPage() {
     setLoading(false);
 
     if (res?.error) {
-      setError("Incorrect password.");
+      setError("Incorrect password, or too many attempts — wait a few minutes.");
       return;
     }
 
-    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({email}) , headers:{"content-Type":"application/json"}})
+    // Keep the button disabled through the redirect; re-enabling it here just
+    // invites a second submit against a page that is already navigating away.
+    setLoading(true);
+
+    // Identity comes from the session cookie now, not a body we could spoof.
+    await fetch("/api/auth/set-refresh-token", { method: "POST" });
 
     const fresh = await getSession();
     router.push(roleHome(fresh?.user?.role));
@@ -92,7 +109,7 @@ export default function SignInPage() {
 
     const res = await fetch("/api/auth/create-password", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim(), password }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -105,12 +122,20 @@ export default function SignInPage() {
     }
 
     // Auto sign in after creating password
-    await signIn("credentials", {
-      email,
+    const signedIn = await signIn("credentials", {
+      email: email.trim(),
       password,
       redirect: false,
     });
-    await fetch('api/auth/set-refresh-token',{method:"POST" , body:JSON.stringify({email}) , headers:{"content-Type":"application/json"}})
+
+    if (signedIn?.error) {
+      setLoading(false);
+      setError("Password saved, but sign in failed. Try signing in.");
+      setStep("password");
+      return;
+    }
+    // Identity comes from the session cookie now, not a body we could spoof.
+    await fetch("/api/auth/set-refresh-token", { method: "POST" });
 
     const fresh = await getSession();
     setLoading(false);
@@ -186,6 +211,8 @@ export default function SignInPage() {
                 <input
                   id="email"
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
                   autoFocus
                   placeholder="dana@company.com"
                   value={email}
@@ -198,10 +225,10 @@ export default function SignInPage() {
                 {loading ? "Checking..." : "Continue"}
               </button>
                <Link
-            href="/sign-in"
+            href="/sign-up"
             className="cursor-pointer text-center text-[13px] text-muted-foreground underline underline-offset-[3px] transition-colors hover:text-foreground"
           >
-            Doesn't have an email yet? Sign up
+            Doesn&apos;t have an email yet? Sign up
           </Link>
             </div>
             
@@ -217,6 +244,7 @@ export default function SignInPage() {
                 <input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   autoFocus
                   placeholder="••••••••"
                   value={password}
@@ -241,6 +269,7 @@ export default function SignInPage() {
                 <input
                   id="new-password"
                   type="password"
+                  autoComplete="new-password"
                   autoFocus
                   placeholder="••••••••"
                   value={password}
@@ -256,6 +285,7 @@ export default function SignInPage() {
                 <input
                   id="confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

@@ -6,7 +6,15 @@ import { Check, Copy, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 /** Invite link modal — shows the lobby link and copies it on open. */
-export default function InviteModal({ onClose }: { onClose: () => void }) {
+export default function InviteModal({
+  onClose,
+  endpoint = "/api/business/invite",
+  description = "Anyone with this link can join your lobby as an agent.",
+}: {
+  onClose: () => void;
+  endpoint?: string;
+  description?: string;
+}) {
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -15,7 +23,7 @@ export default function InviteModal({ onClose }: { onClose: () => void }) {
     let cancelled = false;
 
     async function load() {
-      const res = await fetch("/api/busniess/invite");
+      const res = await fetch(endpoint);
 
       if (!res.ok) {
         if (!cancelled) setError("Could not create an invite link.");
@@ -39,7 +47,7 @@ export default function InviteModal({ onClose }: { onClose: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [endpoint]);
 
   async function copy(value: string, opts?: { silent?: boolean }) {
     try {
@@ -78,7 +86,7 @@ export default function InviteModal({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="text-[15px] font-semibold tracking-tight">Invite your team</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Anyone with this link can join your lobby as an agent.
+              {description}
             </p>
           </div>
           <button

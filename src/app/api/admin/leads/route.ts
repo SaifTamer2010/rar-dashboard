@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/Lead";
-import User from "@/models/User";
-import Campaign from "@/models/Campaign";
 import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,7 +46,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "super_admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 

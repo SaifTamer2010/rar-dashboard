@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Token from "@/models/Token";
-import { SignJWT } from "jose";
 
 export async function POST(req: NextRequest) {
   const refreshToken = req.cookies.get("refresh_token")?.value;
@@ -27,8 +26,6 @@ export async function POST(req: NextRequest) {
   if (tokenDoc.expires_at < new Date()) {
     return NextResponse.json({ error: "Token expired" }, { status: 401 });
   }
-
-  const user = tokenDoc.user_id as any;
 
   // Issue new refresh token (rotate it)
   const newRefreshToken = crypto.randomUUID();
