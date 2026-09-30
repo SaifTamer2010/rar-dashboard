@@ -20,9 +20,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     !pathname.startsWith("/join");
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr]">
+    // grid-cols-1 is minmax(0, 1fr): without it the implicit column sizes to its
+    // content, and the landing marquee's autoFill keeps cloning to fill whatever
+    // width it is given, so the column grew without bound (~1.28M px).
+    <div className="min-h-screen grid grid-cols-1 grid-rows-[auto_1fr]">
       {showNavbar && <DashboardNavbar />}
-      <div id="main">{children}</div>
+      <div id="main" className="min-w-0">{children}</div>
     </div>
   );
 }
